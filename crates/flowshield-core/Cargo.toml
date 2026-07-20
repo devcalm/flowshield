@@ -1,0 +1,33 @@
+[package]
+name = "flowshield-core"
+version = "0.1.0"
+description = "Core traits and types for FlowShield — storage- and framework-agnostic traffic management and rate limiting for Rust."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+
+# Packaging allowlist for `cargo publish`.
+#
+# `include` is an ALLOWLIST and is preferred over `exclude` (a denylist): with an
+# allowlist, files added to the crate directory in the future are excluded from the
+# published package by default, so nothing is accidentally shipped. With `exclude`,
+# new files leak into the package unless someone remembers to exclude them.
+#
+# Repository-level documentation (docs/, .ai/, design docs) lives at the WORKSPACE
+# ROOT, outside this crate's package directory, so it is never packaged regardless.
+# This list is defense-in-depth: only source, the manifest, and the crate README ship.
+#
+# `Cargo.toml` is always included by Cargo. Before the first publish, either copy
+# LICENSE-APACHE / LICENSE-MIT into this crate directory and add them here, or rely
+# on the SPDX `license` field above (which is the authoritative license declaration).
+include = [
+    "src/**/*.rs",
+    "README.md",
+]
+
+[dependencies]

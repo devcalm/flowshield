@@ -1,0 +1,17 @@
+# Build output
+/target
+
+# Editor / IDE
+.idea
+.vscode
+
+# OS
+.DS_Store
+
+# Ephemeral AI/dev scratch — curated .ai/ artifacts ARE committed for provenance;
+# only scratch/ subfolders are ignored (see .ai/README.md).
+.ai/**/scratch/
+
+# NOTE: Cargo.lock is intentionally committed (even though this is a library
+# workspace) for reproducible CI builds. It is never included in published
+# library crates. See docs/design/Plan.md.

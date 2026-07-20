@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "crates/flowshield-core",
+]
+
+[workspace.package]
+edition = "2024"
+license = "MIT OR Apache-2.0"
+# MSRV is intentionally NOT declared during the research & architecture phases.
+# Per ADR-015 (OQ-05), FlowShield develops against current stable Rust and does not
+# advertise or enforce a Minimum Supported Rust Version until the API stabilizes for
+# the first public release. Do not add `rust-version` here until that policy is set.
+#
+# Shared package metadata, inherited by member crates via `<field>.workspace = true`.
+repository = "https://github.com/devcalm/flowshield"
+homepage = "https://github.com/devcalm/flowshield"
+authors = ["Oleksii Tsvietaiev"]
+keywords = ["rate-limiting", "rate-limiter", "throttling", "traffic", "middleware"]
+categories = ["network-programming", "web-programming", "asynchronous"]
+
+[workspace.dependencies]
+tokio = "1"
