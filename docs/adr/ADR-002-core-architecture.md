@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-07-20
 - **Deciders:** FlowShield maintainers
-- **Related:** ADR-001 (Vision & Scope), ADR-003 (Crate Structure), ADR-005 (Storage Abstraction), ADR-008 (Algorithms), ADR-012 (Observability), ADR-016 (Async Runtime Strategy); FR-ratelimit-core, NFR-portability, NFR-observability
+- **Related:** ADR-001 (Vision & Scope), ADR-003 (Crate Structure), ADR-005 (Storage Abstraction), ADR-008 (Algorithms), ADR-012 (Observability), ADR-016 (Async Runtime Strategy); FR-001, FR-050, NFR-021, NFR-050
 
 ## Context
 

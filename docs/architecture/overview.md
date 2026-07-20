@@ -33,10 +33,12 @@ flowchart LR
 
 ## 2. Containers / crates (C4 Level 2)
 
-FlowShield is a multi-crate workspace with a strict **inward dependency rule**: integrations depend on the core, backends implement a core trait, and the core depends on neither (ADR-003, ADR-002). A user pays — in dependencies, compile time, and binary size — only for the backend and integration they enable (ADR-010).
+FlowShield is a multi-crate workspace with a strict **inward dependency rule**: the public facade and every implementation crate depend inward on the core, backends implement a core trait, and the core depends on none of them (ADR-003, ADR-002, ADR-018). Most users install a single crate — **`flowshield`**, the facade — and pay, in dependencies and compile time, only for the backend and integration they enable (ADR-010).
 
 ```mermaid
 flowchart TD
+    app(["User application"])
+    facade["flowshield<br/>(public facade — install this)"]
     subgraph integ["Integration crates (one per framework)"]
         tower["flowshield-tower"]
         axum["flowshield-axum"]
@@ -56,6 +58,10 @@ flowchart TD
     end
     server[("Redis / Valkey server")]
 
+    app --> facade
+    facade -->|"re-exports stable API"| lim
+    facade -.->|"optional feature re-exports"| tower
+    facade -.->|"optional feature re-exports"| mem
     tower --> lim
     axum --> tower
     actix --> lim
@@ -70,10 +76,13 @@ flowchart TD
     valkey --> server
 ```
 
+**The facade / core split (ADR-018).** `flowshield` is the ergonomic entry point most users depend on; it re-exports the stable, user-facing API from `flowshield-core` and hosts the user-facing feature flags that pull in backends and integrations. `flowshield-core` — already published and the foundation of the ecosystem — carries the algorithms, abstractions, and extension traits; implementation crates and advanced users depend on it directly. The facade and core version independently, mirroring `tracing`/`tracing-core` and `tower`/`tower-service`.
+
 **Roles:**
 
 | Element | Responsibility | Governing ADR |
 |---------|----------------|---------------|
+| `flowshield` | The public facade: curated user-facing API, top-level docs, and the feature flags. The crate most users install. | ADR-018 |
 | `flowshield-core` | The engine and the public contract; storage- and framework-agnostic. | ADR-002 |
 | `KeyExtractor` | Derives the limiting key from a request/context (extension point). | ADR-004, ADR-013 |
 | `Algorithm` | The decision strategy — Token Bucket (default) or GCRA (extension point). | ADR-008 |

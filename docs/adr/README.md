@@ -33,6 +33,7 @@ ADRs are immutable once **Accepted**: to change a decision, add a new ADR that s
 | [015](./ADR-015-versioning-and-msrv.md) | Versioning, MSRV & Compatibility | Accepted (MSRV value deferred) | OQ-05 |
 | [016](./ADR-016-async-runtime.md) | Async Runtime Strategy | Accepted | OQ-06 |
 | [017](./ADR-017-time-source.md) | Time Source | Accepted | — |
+| [018](./ADR-018-facade-crate.md) | Public Facade Crate (`flowshield`) | Accepted | — |
 
 ## Relationship to other documents
 

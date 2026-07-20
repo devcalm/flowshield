@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-07-20
 - **Deciders:** FlowShield maintainers
-- **Related:** ADR-002 (Core Architecture), ADR-005 (Storage Abstraction), ADR-006 (Redis & Valkey Strategy), ADR-008 (Algorithms), ADR-013 (Public Extension API Stability); NFR-scope, NFR-portability, FR-ratelimit-core
+- **Related:** ADR-002 (Core Architecture), ADR-005 (Storage Abstraction), ADR-006 (Redis & Valkey Strategy), ADR-008 (Algorithms), ADR-013 (Public Extension API Stability), ADR-018 (Facade Crate); FR-001, NFR-021, NFR-050
 
 ## Context
 

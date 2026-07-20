@@ -1,7 +1,9 @@
 %% FlowShield — C4 Level 2: Container / Crate view
 %% Canonical source. Rendered copy embedded in docs/architecture/overview.md.
-%% See ADR-002 (Core Architecture), ADR-003 (Crate Structure), ADR-013 (Extension API).
+%% See ADR-002 (Core Architecture), ADR-003 (Crate Structure), ADR-013 (Extension API), ADR-018 (Facade Crate).
 flowchart TD
+    app(["User application"])
+    facade["flowshield<br/>(public facade — install this)"]
     subgraph integ["Integration crates (one per framework)"]
         tower["flowshield-tower"]
         axum["flowshield-axum"]
@@ -21,6 +23,10 @@ flowchart TD
     end
     server[("Redis / Valkey server")]
 
+    app --> facade
+    facade -->|"re-exports stable API"| lim
+    facade -.->|"optional feature re-exports"| tower
+    facade -.->|"optional feature re-exports"| mem
     tower --> lim
     axum --> tower
     actix --> lim

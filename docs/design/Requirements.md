@@ -536,7 +536,7 @@ Each requirement has an **ID**, **Description**, **Priority**, and **Acceptance 
   2. Architecture diagrams exist and are referenced from the docs.
 
 #### NFR-023 — Minimal default footprint
-- **Description:** Default builds shall be lean, with optional functionality behind a **minimal, additive feature-flag set**: `default = ["memory"]`, plus `memory`, `redis`, `valkey`, `tower`, `axum`, `actix`, `metrics`, `tracing`. A small flag set is chosen deliberately to bound the combinatorial test matrix. *Decision:* ADR-010; resolves OQ-09.
+- **Description:** Default builds shall be lean, with optional functionality behind a **minimal, additive feature-flag set** hosted on the **`flowshield` facade crate** (ADR-018): `default = ["memory"]`, plus `memory`, `redis`, `valkey`, `tower`, `axum`, `actix`, `metrics`, `tracing`. A small flag set is chosen deliberately to bound the combinatorial test matrix. *Decision:* ADR-010, ADR-018; resolves OQ-09.
 - **Priority:** Must
 - **Acceptance Criteria:**
   1. A minimal build includes only the core and the memory backend (`default = ["memory"]`).

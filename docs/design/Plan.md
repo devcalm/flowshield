@@ -24,7 +24,7 @@ Work is organized into sequential **phases**. Each phase lists an Objective, Mot
 | Phase | Title | Primary ADRs | Complexity |
 |-------|-------|--------------|------------|
 | 0 | Research & Architecture | all | — (in progress) |
-| 1 | Core Abstractions & Public API | 002, 004, 005, 007, 011, 013, 016, 017 | L |
+| 1 | Core Abstractions & Public API | 002, 004, 005, 007, 011, 013, 016, 017, 018 | L |
 | 2 | Memory Backend + Algorithms (single-node MVP) | 005, 008, 010 | L |
 | 3 | Observability | 010, 012 | M |
 | 4 | Distributed Backends (Redis + Valkey) | 005, 006, 007 | L |
@@ -59,7 +59,7 @@ Work is organized into sequential **phases**. Each phase lists an Objective, Mot
 
 - **Objective:** Establish the storage/framework-agnostic core: the public traits, the limiter builder, the decision and error types, and the degradation-policy type — with no concrete backend logic yet.
 - **Motivation:** The public API and extension seams are the longest-lived artifacts (ADR-004, ADR-013); getting the shape right before backends depend on it prevents costly churn.
-- **Scope:** `flowshield-core` only. Public traits `StorageBackend`, `Algorithm`, `KeyExtractor`; the limiter builder; the `Decision` (allow/reject + retry-after) type; the error taxonomy; the extensible degradation-policy type; construction-time validation. Async boundary defined per ADR-016.
+- **Scope:** `flowshield-core` plus the `flowshield` facade wiring (ADR-018). Public traits `StorageBackend`, `Algorithm`, `KeyExtractor`; the limiter builder; the `Decision` (allow/reject + retry-after) type; the error taxonomy; the extensible degradation-policy type; construction-time validation; and the facade's curated re-exports. Async boundary defined per ADR-016.
 - **Tasks:**
   1. ☐ Define the `StorageBackend` extension trait and its documented semantics (atomic check-and-consume, TTL/expiry, typed errors) — no implementation. (ADR-005)
   2. ☐ Define the `Algorithm` extension trait. (ADR-008)
@@ -71,13 +71,14 @@ Work is organized into sequential **phases**. Each phase lists an Objective, Mot
   7. ☐ Design the limiter builder with construction-time validation. (ADR-004, FR-010, FR-072)
   8. ✅ Establish CI: fmt, clippy (`-D warnings`), test matrix (stable/beta × ubuntu/macOS), doc build, weekly security audit, and Dependabot. (NFR-033)
   9. ☐ Write the backend **conformance test-suite harness** (contract tests any backend can run) — behavior only, run against an in-crate test double. (FR-025)
+  10. ☐ Wire the **`flowshield` facade**: re-export the stable public API from core via `#[doc(inline)]`, and establish the user-facing feature-flag host (flags added as backends/integrations land). (ADR-018)
 - **Deliverables:** `flowshield-core` public API (documented, unit-tested against test doubles); conformance harness; CI pipeline.
 - **Dependencies:** Phase 0 approved.
 - **Risks:** Premature API lock-in → mitigate by validating the surface against the Phase-2 backends before any `0.x` stabilization; keep everything `#[non_exhaustive]`.
 - **Acceptance Criteria:** Core compiles with no backend/framework deps (NFR-021); traits are implementable by an out-of-crate type (NFR-020); config validation rejects invalid limits (FR-072); errors are typed, never panics (FR-080, NFR-012).
 - **Exit Criteria:** Public API reviewed and documented; conformance harness runs green against a test double; CI green.
 - **Estimated Complexity:** L.
-- **Implements ADRs:** 002, 004, 005, 007, 011, 013, 016, 017.
+- **Implements ADRs:** 002, 004, 005, 007, 011, 013, 016, 017, 018.
 
 ---
 

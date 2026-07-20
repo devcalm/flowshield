@@ -2,6 +2,8 @@
 
 Core traits and types for **[FlowShield](https://github.com/devcalm/flowshield)** — storage- and framework-agnostic traffic management and rate limiting for Rust.
 
+> 💡 **Most users want the [`flowshield`](https://crates.io/crates/flowshield) facade crate instead.** `flowshield-core` is the foundation that the facade and ecosystem crates build on; depend on it directly only if you are writing an ecosystem crate or need low-level access. See [ADR-018](https://github.com/devcalm/flowshield/blob/main/docs/adr/ADR-018-facade-crate.md).
+
 > **Status: Phase 0 (design).** This crate is a placeholder; the public API is under design and **not yet implemented**. See the [design docs](https://github.com/devcalm/flowshield/tree/main/docs) for the authoritative blueprint.
 
 `flowshield-core` will define the framework's foundation — the `StorageBackend`, `Algorithm`, and `KeyExtractor` extension points, the limiter builder, the admission-decision and error types, and the backend-degradation policy — with **no** dependency on any storage backend or web framework. Backends (`flowshield-memory`, `flowshield-redis`, `flowshield-valkey`) and integrations (`flowshield-tower`, `flowshield-axum`, `flowshield-actix`) build on top of it.

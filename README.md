@@ -27,11 +27,28 @@ If you are evaluating FlowShield: start with the [design charter](docs/design/ch
 
 See the [Software Requirements Specification](docs/design/Requirements.md) for the authoritative scope.
 
+## Installation
+
+Most users install the facade crate, **`flowshield`**:
+
+```toml
+[dependencies]
+flowshield = "0.1"
+```
+
+Once the API lands (Phase 1), typical usage will be:
+
+```rust,ignore
+use flowshield::Limiter;
+```
+
+`flowshield` re-exports the stable API from [`flowshield-core`](https://crates.io/crates/flowshield-core) — the already-published foundation of the ecosystem. Advanced users and ecosystem crates may depend on `flowshield-core` directly. See [ADR-018](docs/adr/ADR-018-facade-crate.md) for the facade/core split.
+
 ## Repository layout
 
 | Path | Contents |
 |------|----------|
-| [`crates/`](crates/) | The published library crates (`flowshield-*`). |
+| [`crates/`](crates/) | The published library crates: **`flowshield`** (public facade) and **`flowshield-core`** (foundation). |
 | [`examples/`](examples/) | Runnable examples (added from Phase 2). |
 | [`docs/`](docs/README.md) | All project documentation — start at the docs index. |
 | [`docs/adr/`](docs/adr/README.md) | Architecture Decision Records. |
@@ -46,7 +63,7 @@ See the [Software Requirements Specification](docs/design/Requirements.md) for t
 - **[Charter](docs/design/charter.md)** — the founding research & architecture brief.
 - **[Requirements (SRS)](docs/design/Requirements.md)** — goals, functional/non-functional requirements, personas, risks.
 - **[Roadmap (Plan)](docs/design/Plan.md)** — the phased implementation plan.
-- **[Architecture Decision Records](docs/adr/README.md)** — the 16 ADRs behind the design.
+- **[Architecture Decision Records](docs/adr/README.md)** — the 18 ADRs behind the design.
 
 ## Contributing
 

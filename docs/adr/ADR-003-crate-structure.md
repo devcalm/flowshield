@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-07-20
 - **Deciders:** FlowShield maintainers
-- **Related:** ADR-002 (Core Architecture), ADR-005 (Storage Abstraction), ADR-009 (Middleware & Framework Integration), ADR-010 (Feature Flags), ADR-013 (Public Extension API Stability); NFR-footprint, NFR-portability, NFR-compile-time
+- **Related:** ADR-002 (Core Architecture), ADR-005 (Storage Abstraction), ADR-009 (Middleware & Framework Integration), ADR-010 (Feature Flags), ADR-013 (Public Extension API Stability), ADR-018 (Facade Crate); NFR-021, NFR-023, NFR-050
 
 ## Context
 
@@ -13,11 +13,12 @@ The workspace is edition 2024, targets Rust >= 1.88 (no committed MSRV until pre
 
 ## Decision
 
-FlowShield is a **multi-crate Cargo workspace** with a strict inward dependency rule: **integrations and backends depend on core; core depends on neither.**
+FlowShield is a **multi-crate Cargo workspace** with a strict inward dependency rule: **the public facade and all implementation crates depend inward on `flowshield-core`; the core depends on none of them.**
 
 Planned crates:
 
-- **flowshield-core** — the agnostic contracts and orchestration (KeyExtractor, Algorithm, StorageBackend, Middleware traits; decision types; error model). Storage- and framework-agnostic.
+- **flowshield** — the public **facade** crate (ADR-018): the ergonomic entry point most users install. Re-exports the stable public API from core and hosts the user-facing feature flags. Only this crate and `flowshield-core` exist initially; the remaining crates below are roadmap.
+- **flowshield-core** — the agnostic contracts and orchestration (KeyExtractor, Algorithm, StorageBackend, Middleware traits; decision types; error model). Storage- and framework-agnostic. Already published to crates.io and remains the foundation.
 - **flowshield-memory** — in-process, exact-semantics StorageBackend.
 - **flowshield-redis** — Redis StorageBackend (exact on the executing primary; bounded over-admission only under replication/failover — see ADR-005).
 - **flowshield-valkey** — Valkey StorageBackend, first-class alongside Redis (ADR-006).
@@ -32,12 +33,15 @@ Planned crates:
 - Core is a leaf toward the rest of the ecosystem: it never imports a backend or a framework crate.
 - Backends depend only on core (plus their storage client).
 - Framework integrations depend on core and typically on a backend chosen by the user; framework crates never depend on each other.
-- Feature flags (ADR-010) gate optional backends/integrations behind the umbrella; `default = ["memory"]`.
+- The facade (`flowshield`, ADR-018) sits at the top of the graph: it depends on core and, via feature flags, optionally re-exports backends/integrations. Nothing depends on the facade.
+- The user-facing feature flags (ADR-010) are hosted on the **facade** and forward to the implementation crates; the target default is `["memory"]` once that crate lands.
 
 **Per-framework isolation.** Each web framework gets its own crate rather than feature-gated modules in one integration crate. This prevents one framework's dependency tree, version churn, or breaking change from forcing recompiles or version bumps on users of another.
 
 ```mermaid
 graph TD
+    APP[User application] --> FACADE
+    FACADE[flowshield facade] --> CORE
     CORE[flowshield-core]
 
     MEM[flowshield-memory] --> CORE
@@ -57,6 +61,8 @@ graph TD
 
     classDef core fill:#2b6cb0,color:#fff,stroke:#1a4971;
     class CORE core;
+    classDef facade fill:#276749,color:#fff,stroke:#1a4731;
+    class FACADE facade;
 ```
 
 *(Dashed edge = optional/likely-but-not-mandatory dependency; user code selects a backend for an integration.)*
@@ -86,4 +92,4 @@ graph TD
 
 ## Future Evolution
 
-New backends and framework integrations arrive as additional `flowshield-*` crates following the same inward dependency rule, with no change to core. Future traffic-management modes (concurrency, quotas, throttling, budgeting) extend flowshield-core's contracts rather than adding new dependency edges. If an umbrella/facade crate is ever introduced for ergonomics, it must sit at the top of the graph (depending inward) and never invert the direction rule. Extension-point stability across these crates is governed by ADR-013.
+New backends and framework integrations arrive as additional `flowshield-*` crates following the same inward dependency rule, with no change to core. Future traffic-management modes (concurrency, quotas, throttling, budgeting) extend flowshield-core's contracts rather than adding new dependency edges. The facade crate (`flowshield`, ADR-018) sits at the top of the graph, depending inward, and never inverts the direction rule; any future facade or preset crate follows the same rule. Extension-point stability across these crates is governed by ADR-013.

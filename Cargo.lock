@@ -3,5 +3,12 @@
 version = 4
 
 [[package]]
+name = "flowshield"
+version = "0.1.0"
+dependencies = [
+ "flowshield-core",
+]
+
+[[package]]
 name = "flowshield-core"
 version = "0.1.0"

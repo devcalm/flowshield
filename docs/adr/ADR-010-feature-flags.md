@@ -3,7 +3,7 @@
 - **Status: Accepted**
 - **Date: 2026-07-20**
 - **Deciders: FlowShield maintainers**
-- **Related:** ADR-003 (Crate Structure), ADR-009 (Middleware & Integration), ADR-012 (Observability); FR-003, NFR-023, NFR-033
+- **Related:** ADR-003 (Crate Structure), ADR-009 (Middleware & Integration), ADR-012 (Observability), ADR-018 (Facade Crate); FR-003, NFR-023, NFR-033
 
 ## Context
 
@@ -16,6 +16,8 @@ Two requirements shape the design: features must be **additive** (enabling more 
 Keep the feature set **minimal**. The default enables only in-memory storage:
 
 `default = ["memory"]`
+
+These are the **user-facing** flags and are hosted on the **`flowshield` facade crate** (ADR-018), which forwards each to its implementation crate; `flowshield-core` itself stays lean and largely feature-free. The table below is therefore the facade's flag set, declared incrementally as each implementation crate lands.
 
 | Flag       | Default | Enables                                             | Notes |
 |------------|:-------:|-----------------------------------------------------|-------|

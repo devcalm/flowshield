@@ -1,0 +1,33 @@
+[package]
+name = "flowshield"
+version = "0.1.0"
+description = "Ergonomic traffic management and rate limiting for Rust — the public facade over flowshield-core."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+
+# Packaging allowlist for `cargo publish` (see ADR-003, ADR-018). `include` is an
+# allowlist — preferred over `exclude` — so new files are excluded by default.
+# Repository documentation lives at the workspace root, outside this package, and is
+# never shipped regardless.
+include = [
+    "src/**/*.rs",
+    "README.md",
+]
+
+[dependencies]
+# The facade re-exports the stable public API from the core crate. Both a version
+# (used when published to crates.io) and a path (used inside this workspace) are
+# specified so local builds and published builds resolve correctly.
+flowshield-core = { version = "0.1", path = "../flowshield-core" }
+
+# NOTE (ADR-018 + ADR-010): the user-facing feature taxonomy
+# (memory / redis / valkey / tower / axum / actix / metrics / tracing) will be hosted
+# HERE on the facade and forward to the implementation crates as those crates land.
+# They are intentionally not declared yet: a feature that enables a not-yet-existent
+# optional dependency would fail to compile. See docs/design/Plan.md.
