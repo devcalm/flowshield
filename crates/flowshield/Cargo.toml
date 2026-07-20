@@ -1,6 +1,6 @@
 [package]
 name = "flowshield"
-version = "0.1.0"
+version = "0.1.1"
 description = "Ergonomic traffic management and rate limiting for Rust — the public facade over flowshield-core."
 edition.workspace = true
 license.workspace = true
