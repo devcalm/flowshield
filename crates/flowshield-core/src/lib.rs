@@ -1,14 +1,14 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+pub mod algorithm;
+pub mod decision;
+pub mod error;
+pub mod key;
+pub mod limiter;
+pub mod memory;
+pub mod store;
+pub mod time;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+// The backend conformance harness. Compiled for the crate's own tests, and for
+// external consumers who opt in via the `conformance` feature — it is not part
+// of the default (shipping) build.
+#[cfg(any(test, feature = "conformance"))]
+pub mod conformance;

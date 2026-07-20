@@ -30,4 +30,15 @@ include = [
     "README.md",
 ]
 
+[features]
+# Exposes the backend conformance harness (`conformance` module) so external
+# backend crates can run the ADR-005 contract tests against their own store.
+# Enable it as a dev-dependency; it pulls in no extra dependencies and never
+# ships in a normal build.
+conformance = []
+
 [dependencies]
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

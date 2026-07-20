@@ -36,14 +36,19 @@
 //!
 //! ## Status
 //!
-//! FlowShield is in **Phase 0 (design)**. The public API is still being built, so this
-//! facade does not yet re-export user-facing types — that happens in Phase 1 as
-//! `flowshield-core`'s surface stabilizes.
+//! FlowShield is in early development (Phase 1). The core API is taking shape; the
+//! re-exports below track `flowshield-core`'s public surface and grow as backends and
+//! integrations land.
 
-// Public re-exports of the stable API are added here as flowshield-core's surface lands
-// in Phase 1, for example:
-//
-//     #[doc(inline)]
-//     pub use flowshield_core::Limiter;
-//
-// Nothing is re-exported yet, to avoid exposing placeholder API through the facade.
+/// The stable, user-facing API, re-exported from `flowshield-core`.
+#[doc(inline)]
+pub use flowshield_core::{
+    algorithm::{Algorithm, token_bucket::TokenBucket},
+    decision::{Allowed, Decision, Rejected},
+    error::{Error, Result},
+    key::{Key, KeyExtractor},
+    limiter::{DegradationPolicy, Limiter, LimiterBuilder},
+    memory::MemoryStore,
+    store::StorageBackend,
+    time::{MonotonicClock, TimeSource},
+};
