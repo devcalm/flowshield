@@ -2,6 +2,7 @@
 
 > Traffic management for Rust — starting with distributed, pluggable rate limiting.
 
+[![CI](https://github.com/devcalm/flowshield/actions/workflows/ci.yml/badge.svg)](https://github.com/devcalm/flowshield/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 [![Status: Phase 0 — Design](https://img.shields.io/badge/status-Phase%200%20%E2%80%94%20design-orange.svg)](docs/design/Plan.md)
 

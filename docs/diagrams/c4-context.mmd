@@ -1,0 +1,17 @@
+%% FlowShield — C4 Level 1: System Context
+%% Canonical source. Rendered copy embedded in docs/architecture/overview.md.
+%% See ADR-001 (Vision & Scope), ADR-002 (Core Architecture).
+flowchart LR
+    client(["API Client<br/>person or upstream system"])
+    subgraph svc["Your Rust Service"]
+        fs["FlowShield<br/>rate-limiting library"]
+        handler["Application handler<br/>(protected resource)"]
+    end
+    store[("Redis / Valkey<br/>shared limiter state")]
+    obs["Observability backend<br/>Prometheus / OpenTelemetry"]
+
+    client -->|"HTTP / gRPC request"| fs
+    fs -->|"admit"| handler
+    fs -.->|"reject: 429 + Retry-After"| client
+    fs <-->|"atomic check-and-consume<br/>(distributed backends)"| store
+    fs -.->|"metrics · traces · logs"| obs

@@ -1,0 +1,35 @@
+%% FlowShield — C4 Level 2: Container / Crate view
+%% Canonical source. Rendered copy embedded in docs/architecture/overview.md.
+%% See ADR-002 (Core Architecture), ADR-003 (Crate Structure), ADR-013 (Extension API).
+flowchart TD
+    subgraph integ["Integration crates (one per framework)"]
+        tower["flowshield-tower"]
+        axum["flowshield-axum"]
+        actix["flowshield-actix"]
+    end
+    subgraph core["flowshield-core (engine — no backend/framework deps)"]
+        lim["Limiter + builder<br/>DegradationPolicy"]
+        ke["KeyExtractor"]
+        alg["Algorithm<br/>Token Bucket · GCRA"]
+        ts["TimeSource"]
+        sb{{"StorageBackend (trait)"}}
+    end
+    subgraph backends["Backend crates"]
+        mem["flowshield-memory<br/>exact, in-process"]
+        redis["flowshield-redis"]
+        valkey["flowshield-valkey"]
+    end
+    server[("Redis / Valkey server")]
+
+    tower --> lim
+    axum --> tower
+    actix --> lim
+    lim --> ke
+    lim --> alg
+    lim --> ts
+    alg --> sb
+    sb -.->|"implemented by"| mem
+    sb -.->|"implemented by"| redis
+    sb -.->|"implemented by"| valkey
+    redis --> server
+    valkey --> server

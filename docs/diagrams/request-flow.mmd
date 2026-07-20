@@ -1,0 +1,33 @@
+%% FlowShield — Admission decision lifecycle
+%% Canonical source. Rendered copy embedded in docs/architecture/overview.md.
+%% See ADR-002, ADR-005 (Storage), ADR-007 (Degradation), ADR-008 (Algorithms), ADR-017 (Time Source).
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant MW as Middleware (tower/axum/actix)
+    participant L as Limiter (core)
+    participant A as Algorithm (Token Bucket / GCRA)
+    participant T as TimeSource
+    participant S as StorageBackend
+    participant O as Observability
+
+    C->>MW: request
+    Note over MW: KeyExtractor derives the limiting key
+    MW->>L: check(key, cost)
+    L->>A: evaluate(key, cost)
+    A->>T: now() (monotonic, store-authoritative for shared keys)
+    A->>S: atomic check-and-consume(key, state, now)
+    alt backend healthy
+        S-->>A: allowed / denied (+ new state)
+        A-->>L: Decision
+    else backend failure or timeout
+        S-->>A: error
+        A-->>L: DegradationPolicy applied (FailClosed by default)
+    end
+    L->>O: emit metrics / traces / logs
+    L-->>MW: Decision (+ Retry-After if rejected)
+    alt allowed
+        MW->>C: forward to handler, return response
+    else rejected
+        MW-->>C: HTTP 429 + Retry-After
+    end

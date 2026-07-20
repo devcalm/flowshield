@@ -3,8 +3,16 @@
 Source-controlled architecture diagrams for FlowShield.
 
 **Conventions:**
-- Prefer **text-based, diffable sources** (Mermaid `.mmd`, or C4 via structurizr/PlantUML) so diagrams review like code.
-- Commit both the **source** and, where useful, a rendered **export** (`.svg` preferred over `.png` for crisp scaling).
-- Name files by subject and level, e.g. `c4-context.mmd`, `c4-container.mmd`, `request-flow.mmd`.
+- Diagrams are authored as **text-based, diffable Mermaid sources** (`.mmd`) so they review like code.
+- The **rendered copies** are embedded in [`../architecture/overview.md`](../architecture/overview.md), which is where humans read them (GitHub renders Mermaid). When you change a `.mmd` file, update its embedded copy in the overview.
+- Name files by subject and level.
 
-**Status:** to be populated during Phase 1. Interim diagrams are embedded inline in [ADR-002](../adr/ADR-002-core-architecture.md) and [ADR-003](../adr/ADR-003-crate-structure.md) as Mermaid blocks; they will be extracted here as the architecture stabilizes.
+## Current diagrams
+
+| Source | Level | Rendered in |
+|--------|-------|-------------|
+| [`c4-context.mmd`](c4-context.mmd) | C4 L1 — System context | [overview §1](../architecture/overview.md#1-system-context-c4-level-1) |
+| [`c4-container.mmd`](c4-container.mmd) | C4 L2 — Containers / crates | [overview §2](../architecture/overview.md#2-containers--crates-c4-level-2) |
+| [`request-flow.mmd`](request-flow.mmd) | Sequence — Admission lifecycle | [overview §3](../architecture/overview.md#3-request-lifecycle) |
+
+Additional diagrams (e.g., per-backend or per-integration detail) will be added alongside the code that introduces them.

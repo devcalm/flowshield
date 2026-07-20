@@ -44,7 +44,7 @@ Work is organized into sequential **phases**. Each phase lists an Objective, Mot
   2. ✅ Resolve open questions via maintainer review; record in the Decision Log (§16).
   3. ✅ Author ADR-001 … ADR-016 under `docs/adr/`.
   4. ✅ Author this roadmap.
-  5. ☐ Consolidate architecture diagrams (C4 context/container + request-flow) — currently embedded in ADR-002/003; extract into a diagrams index if desired.
+  5. ✅ Consolidate architecture diagrams (C4 context/container + request-flow) into `docs/diagrams/` (`.mmd` sources) and a narrative `docs/architecture/overview.md`.
 - **Deliverables:** `Requirements.md` (v0.2), `docs/adr/` (16 ADRs + index + template), `Plan.md`, architecture diagrams.
 - **Dependencies:** None.
 - **Risks:** R-03 (API instability) and R-01 (distributed correctness) are addressed here by design review; residual risk carried into later phases.
@@ -69,7 +69,7 @@ Work is organized into sequential **phases**. Each phase lists an Objective, Mot
   6. ☐ Define the extensible `DegradationPolicy` type (FailClosed default, FailOpen opt-in; room for FailToLocal). (ADR-007)
   6a. ☐ Define the injectable, monotonic **time-source abstraction** (production monotonic clock + controllable test clock); algorithm math reads time through it. (ADR-017)
   7. ☐ Design the limiter builder with construction-time validation. (ADR-004, FR-010, FR-072)
-  8. ☐ Establish CI: fmt, clippy, test, feature matrix skeleton. (NFR-033)
+  8. ✅ Establish CI: fmt, clippy (`-D warnings`), test matrix (stable/beta × ubuntu/macOS), doc build, weekly security audit, and Dependabot. (NFR-033)
   9. ☐ Write the backend **conformance test-suite harness** (contract tests any backend can run) — behavior only, run against an in-crate test double. (FR-025)
 - **Deliverables:** `flowshield-core` public API (documented, unit-tested against test doubles); conformance harness; CI pipeline.
 - **Dependencies:** Phase 0 approved.

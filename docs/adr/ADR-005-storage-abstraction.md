@@ -45,8 +45,8 @@ A **backend conformance test-suite** is defined as a reusable, backend-independe
 flowchart TD
     Core[flowshield-core<br/>algorithms + framework] -->|storage contract| SA{Storage Abstraction}
     SA --> Mem[flowshield-memory<br/>exact]
-    SA --> Redis[flowshield-redis<br/>exact on primary;<br/>bounded under failover]
-    SA --> Valkey[flowshield-valkey<br/>exact on primary;<br/>bounded under failover]
+    SA --> Redis[flowshield-redis<br/>exact on primary<br/>bounded under failover]
+    SA --> Valkey[flowshield-valkey<br/>exact on primary<br/>bounded under failover]
     SA -.research.-> Future[PostgreSQL / DynamoDB / FoundationDB<br/>guarantee TBD]
     Suite[Conformance Test-Suite] -.verifies.-> Mem
     Suite -.verifies.-> Redis

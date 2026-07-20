@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/devcalm/flowshield/security/advisories/new
+    about: Please report security issues privately — see SECURITY.md. Do not open a public issue.
+  - name: Contributing guide
+    url: https://github.com/devcalm/flowshield/blob/main/CONTRIBUTING.md
+    about: How to contribute, the ADR process, and quality gates.

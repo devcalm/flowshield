@@ -1,0 +1,37 @@
+name: Bug report
+description: Report a defect in FlowShield.
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! Note FlowShield is in Phase 0 (design) — there is no released
+        code yet, so bug reports mostly concern the design/docs for now.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the problem, including what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps or a code snippet that reproduces the issue.
+    validations:
+      required: false
+  - type: input
+    id: crate
+    attributes:
+      label: Affected crate / component
+      placeholder: e.g. flowshield-core, docs/adr/ADR-005
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Rust version, OS, backend (memory/redis/valkey), and versions — when applicable.
+    validations:
+      required: false
