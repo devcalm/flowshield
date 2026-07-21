@@ -82,7 +82,8 @@ pub use flowshield_core::{
     error::{Error, Result},
     key::{Key, KeyExtractor},
     limiter::{DegradationPolicy, Limiter, LimiterBuilder},
-    store::StorageBackend,
+    resp::{RespProgram, RespScripted},
+    store::{Evaluate, LocalStore, evaluate_local},
     time::{MonotonicClock, TimeSource},
 };
 
@@ -92,3 +93,15 @@ pub use flowshield_core::{
 #[cfg(feature = "memory")]
 #[doc(inline)]
 pub use flowshield_memory::MemoryStore;
+
+/// The Redis distributed backend, enabled by the `redis` feature (ADR-006). Depend on
+/// `flowshield-redis` directly for its builder and tuning knobs.
+#[cfg(feature = "redis")]
+#[doc(inline)]
+pub use flowshield_redis::RedisStore;
+
+/// The Valkey distributed backend, enabled by the `valkey` feature (ADR-006). Depend
+/// on `flowshield-valkey` directly for its builder and tuning knobs.
+#[cfg(feature = "valkey")]
+#[doc(inline)]
+pub use flowshield_valkey::ValkeyStore;

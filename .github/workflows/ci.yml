@@ -77,3 +77,35 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo doc --workspace --no-deps --all-features --locked
+
+  # Distributed-backend integration tests against real Redis and Valkey (ADR-006).
+  # Service containers run only on Linux runners; the main test matrix (which also
+  # compiles these crates) simply skips the reachability-gated tests when no server
+  # is present. Here the FLOWSHIELD_REQUIRE_* flags make an unreachable server a hard
+  # failure, so the distributed path is genuinely exercised.
+  integration:
+    name: integration (redis + valkey)
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 2s
+          --health-timeout 3s --health-retries 10
+      valkey:
+        image: valkey/valkey:8-alpine
+        ports: ["6380:6379"]
+        options: >-
+          --health-cmd "valkey-cli ping" --health-interval 2s
+          --health-timeout 3s --health-retries 10
+    env:
+      FLOWSHIELD_REQUIRE_REDIS: "1"
+      FLOWSHIELD_REQUIRE_VALKEY: "1"
+      FLOWSHIELD_REDIS_URL: "redis://127.0.0.1:6379"
+      FLOWSHIELD_VALKEY_URL: "redis://127.0.0.1:6380"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p flowshield-redis -p flowshield-valkey --locked

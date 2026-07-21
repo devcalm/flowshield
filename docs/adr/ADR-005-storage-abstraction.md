@@ -1,5 +1,7 @@
 # ADR-005: Storage Abstraction
 
+> **Refined by [ADR-019](./ADR-019-storage-seam-revision.md):** the design-level contract below is unchanged, but its concrete Rust realization is revised from the single closure-based `StorageBackend<S>` seam into two execution families (`LocalStore` for client-side transitions, per-encoding capabilities such as `RespScripted` for server-side ones) unified by the `Evaluate<A>` bridge.
+
 - **Status: Accepted**
 - **Date: 2026-07-20**
 - **Deciders: FlowShield maintainers**

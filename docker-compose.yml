@@ -1,0 +1,33 @@
+# Local + CI backing services for FlowShield's distributed backend tests (Phase 4).
+#
+#   docker compose up -d       # start Redis (6379) and Valkey (6380)
+#   cargo test -p flowshield-redis -p flowshield-valkey
+#   docker compose down
+#
+# The integration tests are reachability-gated: they skip when a service is absent,
+# unless CI / FLOWSHIELD_REQUIRE_REDIS / FLOWSHIELD_REQUIRE_VALKEY is set, in which
+# case an unreachable service is a hard failure. Default URLs:
+#   FLOWSHIELD_REDIS_URL  = redis://127.0.0.1:6379
+#   FLOWSHIELD_VALKEY_URL = redis://127.0.0.1:6380
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports:
+      - "6380:6379"
+    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 10

@@ -1,0 +1,27 @@
+[package]
+name = "flowshield-valkey"
+version = "0.2.0"
+description = "Valkey distributed backend for FlowShield — atomic, server-side rate-limit state over RESP."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+
+include = [
+    "src/**/*.rs",
+    "README.md",
+]
+
+[dependencies]
+flowshield-core = { version = "0.2", path = "../flowshield-core" }
+# The shared RESP logic (ADR-006), identical to what flowshield-redis wraps.
+flowshield-resp = { version = "0.2", path = "../flowshield-resp" }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+flowshield-memory = { version = "0.2", path = "../flowshield-memory" }
+redis = { version = "0.27", default-features = false, features = ["tokio-comp", "script"] }

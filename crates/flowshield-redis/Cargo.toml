@@ -1,0 +1,30 @@
+[package]
+name = "flowshield-redis"
+version = "0.2.0"
+description = "Redis distributed backend for FlowShield — atomic, server-side rate-limit state over RESP."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+
+include = [
+    "src/**/*.rs",
+    "README.md",
+]
+
+[dependencies]
+flowshield-core = { version = "0.2", path = "../flowshield-core" }
+# The shared RESP logic (ADR-006). Redis and Valkey both wrap it.
+flowshield-resp = { version = "0.2", path = "../flowshield-resp" }
+
+[dev-dependencies]
+# Integration tests run on a real Tokio runtime against a Redis from docker-compose.
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+# The memory backend is the oracle the Lua is cross-checked against (ADR-019).
+flowshield-memory = { version = "0.2", path = "../flowshield-memory" }
+# Direct RESP access for the tests' reachability probe and per-test key hygiene.
+redis = { version = "0.27", default-features = false, features = ["tokio-comp", "script"] }

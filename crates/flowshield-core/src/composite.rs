@@ -38,7 +38,7 @@ use crate::decision::Decision;
 use crate::error::Result;
 use crate::key::Key;
 use crate::limiter::Limiter;
-use crate::store::StorageBackend;
+use crate::store::Evaluate;
 use crate::{algorithm::Algorithm, time::TimeSource};
 use std::future::Future;
 use std::pin::Pin;
@@ -178,7 +178,7 @@ pub trait DynLimiter: Send + Sync {
 impl<A, S, C> DynLimiter for Limiter<A, S, C>
 where
     A: Algorithm,
-    S: StorageBackend<A::State>,
+    S: Evaluate<A>,
     C: TimeSource,
 {
     fn check_dyn<'a>(

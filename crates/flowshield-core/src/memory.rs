@@ -1,7 +1,8 @@
+use crate::algorithm::Algorithm;
 use crate::decision::Decision;
 use crate::error::Result;
 use crate::key::Key;
-use crate::store::StorageBackend;
+use crate::store::{Evaluate, LocalStore, evaluate_local};
 use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Mutex;
@@ -40,17 +41,13 @@ impl<S> Default for MemoryStore<S> {
     }
 }
 
-impl<S: Copy + Send + 'static> StorageBackend<S> for MemoryStore<S> {
-    fn kind(&self) -> &'static str {
-        "memory"
-    }
-
-    fn update(
+impl<S: Copy + Send + 'static> LocalStore<S> for MemoryStore<S> {
+    fn transact(
         &self,
         key: &Key,
         now: Duration,
         ttl: Duration,
-        step: impl FnOnce(Option<S>) -> (S, Decision) + Send,
+        step: impl Fn(Option<S>) -> (S, Decision) + Send,
     ) -> impl Future<Output = Result<Decision>> + Send {
         let mut slots = self.slots.lock().expect("MemoryStore mutex poisoned");
         // Treat an expired slot as absent so idle keys are reclaimable (FR-071); this
@@ -59,6 +56,9 @@ impl<S: Copy + Send + 'static> StorageBackend<S> for MemoryStore<S> {
             .get(key)
             .filter(|slot| slot.expires_at > now)
             .map(|slot| slot.state);
+        // A mutex gives exclusive access, so a single `step` application suffices; the
+        // `Fn` bound only *permits* re-runs (for transactional backends), it does not
+        // require them.
         let (new_state, decision) = step(current);
         slots.insert(
             key.clone(),
@@ -70,6 +70,24 @@ impl<S: Copy + Send + 'static> StorageBackend<S> for MemoryStore<S> {
         // The work is synchronous; hand back an already-ready future. The mutex guard is
         // dropped here, before the future is returned, so it is never held across await.
         std::future::ready(Ok(decision))
+    }
+}
+
+// Family-A bridge: forward to the shared `evaluate_local` helper (ADR-019).
+impl<A: Algorithm> Evaluate<A> for MemoryStore<A::State> {
+    fn evaluate(
+        &self,
+        algo: &A,
+        key: &Key,
+        now: Duration,
+        ttl: Duration,
+        cost: u64,
+    ) -> impl Future<Output = Result<Decision>> + Send {
+        evaluate_local(self, algo, key, now, ttl, cost)
+    }
+
+    fn kind(&self) -> &'static str {
+        "memory"
     }
 }
 
@@ -107,13 +125,13 @@ mod tests {
         let key = Key::from("k");
         let ttl = Duration::from_secs(60);
 
-        block_on(store.update(&key, Duration::ZERO, ttl, |prev| {
+        block_on(store.transact(&key, Duration::ZERO, ttl, |prev| {
             assert!(prev.is_none());
             (1, allow())
         }))
         .unwrap();
 
-        block_on(store.update(&key, Duration::ZERO, ttl, |prev| {
+        block_on(store.transact(&key, Duration::ZERO, ttl, |prev| {
             assert_eq!(prev, Some(1));
             (2, reject())
         }))
@@ -126,10 +144,10 @@ mod tests {
         let key = Key::from("k");
         let ttl = Duration::from_secs(10);
 
-        block_on(store.update(&key, Duration::ZERO, ttl, |_| (7, allow()))).unwrap();
+        block_on(store.transact(&key, Duration::ZERO, ttl, |_| (7, allow()))).unwrap();
 
         // Past the TTL, the slot must look absent.
-        block_on(store.update(&key, Duration::from_secs(11), ttl, |prev| {
+        block_on(store.transact(&key, Duration::from_secs(11), ttl, |prev| {
             assert!(prev.is_none());
             (0, allow())
         }))

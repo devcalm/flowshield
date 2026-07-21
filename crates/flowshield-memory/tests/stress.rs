@@ -52,7 +52,7 @@ fn limiter_stays_available_under_a_unique_key_flood() {
 #[test]
 fn store_never_exceeds_its_bound_under_churn() {
     use flowshield_core::decision::Decision;
-    use flowshield_core::store::StorageBackend;
+    use flowshield_core::store::LocalStore;
 
     let store: MemoryStore<u64> = MemoryStoreBuilder::new().capacity(1_000).build().unwrap();
     let bound = store.capacity();
@@ -61,7 +61,7 @@ fn store_never_exceeds_its_bound_under_churn() {
 
     for i in 0..1_000_000u64 {
         let key = Key::from(format!("k-{i}"));
-        block_on(store.update(&key, Duration::ZERO, ttl, |_| (i, allow()))).unwrap();
+        block_on(store.transact(&key, Duration::ZERO, ttl, |_| (i, allow()))).unwrap();
     }
     assert!(
         store.len() <= bound,

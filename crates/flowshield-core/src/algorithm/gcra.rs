@@ -43,6 +43,7 @@
 use crate::algorithm::{Algorithm, nanos_to_duration};
 use crate::decision::{Allowed, Decision, Rejected};
 use crate::error::{Error, Result};
+use crate::resp::{RespProgram, RespScripted};
 use std::time::Duration;
 
 /// A GCRA rate limiter configured by a sustained rate and a burst allowance.
@@ -84,6 +85,15 @@ impl Gcra {
         // The rate → interval conversion is the *only* floating-point step, done
         // once at construction. Everything downstream is exact integer nanos.
         let emission_interval = Duration::from_secs_f64(1.0 / rate_per_sec);
+        // A rate so large that the interval rounds to zero would make the limiter
+        // admit unboundedly (and diverge from the RESP backend, which clamps to 1µs).
+        // Reject it as a config error, symmetrically with Token Bucket's zero-interval
+        // check (ADR-011, FR-072).
+        if emission_interval.is_zero() {
+            return Err(Error::Config(
+                "rate_per_sec is too large: the emission interval rounds to zero".into(),
+            ));
+        }
         // A burst of `b` means `b − 1` requests may run ahead of the schedule.
         let tau = nanos_to_duration(
             emission_interval
@@ -180,6 +190,84 @@ impl Algorithm for Gcra {
                 remaining: Some(remaining),
             }),
         )
+    }
+}
+
+/// The GCRA transition as Lua, for RESP backends (ADR-006). Mirrors [`Gcra::step`]
+/// exactly at **microsecond** resolution (see [`crate::resp`]). State is the single
+/// theoretical-arrival-time (`tat`) value; the conformance rule
+/// `now ≥ tat + (cost−1)·T − τ`, the `max(tat, now)` idle clamp, and the derived
+/// `remaining` all match the Rust implementation above.
+const GCRA_LUA: &str = r#"
+-- Use effects replication so `redis.call('TIME')` before a write is allowed on
+-- Redis 3.2–6 too (a harmless no-op on Redis 7+/Valkey, which already default to it).
+redis.replicate_commands()
+
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+if now < 0 then
+  local t = redis.call('TIME')            -- { seconds, microseconds }
+  now = (tonumber(t[1]) * 1000000) + tonumber(t[2])
+end
+local ttl = tonumber(ARGV[2])
+local cost = tonumber(ARGV[3])
+local T = tonumber(ARGV[4])               -- emission interval (micros)
+local tau = tonumber(ARGV[5])             -- burst tolerance (micros)
+
+local stored = redis.call('GET', key)
+local tat
+if stored == false then tat = now else tat = tonumber(stored) end
+local pexpire = math.ceil(ttl / 1000)
+
+-- Zero-cost probe: report headroom without advancing the schedule (mirrors Rust).
+if cost == 0 then
+  local base = tat
+  if now > base then base = now end
+  local ahead = base - now
+  local remaining
+  if ahead > tau then remaining = 0 else remaining = math.floor((tau - ahead) / T) + 1 end
+  redis.call('SET', key, tat, 'PX', pexpire)   -- unchanged tat, refreshed TTL
+  return { 1, remaining, 0 }
+end
+
+-- Earliest conforming instant, using the stored (unclamped) tat.
+local earliest = tat + ((cost - 1) * T) - tau
+
+if now < earliest then
+  -- Non-conforming: the schedule (tat) is left untouched, but the key's TTL MUST be
+  -- refreshed — exactly as the memory backend and the Token Bucket script do on every
+  -- call. Skipping it would let an actively-rejected key expire mid-limiting and reset
+  -- to a fresh (more-permissive) schedule, violating ADR-005 §3. Persist the unchanged
+  -- tat (also creating the key if this fresh key rejected, e.g. cost > burst).
+  redis.call('SET', key, tat, 'PX', pexpire)
+  return { 0, -1, earliest - now }
+end
+
+-- Conforming: advance by the full cost; the max clamp caps banked idle credit.
+local base = tat
+if now > base then base = now end
+local new_tat = base + (cost * T)
+local ahead = new_tat - now
+if ahead < 0 then ahead = 0 end
+local remaining
+if ahead > tau then remaining = 0 else remaining = math.floor((tau - ahead) / T) + 1 end
+
+redis.call('SET', key, new_tat, 'PX', pexpire)
+return { 1, remaining, 0 }
+"#;
+
+impl RespScripted for Gcra {
+    fn resp_program(&self) -> RespProgram {
+        // Quantise to microseconds once (see `crate::resp`). Clamp T to ≥ 1µs: rates
+        // above 1e6/s exceed the RESP backend's resolution and are pinned to its
+        // ceiling rather than dividing by zero in Lua. τ may legitimately be 0
+        // (burst == 1).
+        let t_micros = (self.emission_interval.as_micros() as i64).max(1);
+        let tau_micros = self.tau.as_micros() as i64;
+        RespProgram {
+            lua: GCRA_LUA,
+            params: vec![t_micros, tau_micros],
+        }
     }
 }
 
@@ -325,5 +413,13 @@ mod tests {
         assert!(matches!(Gcra::new(-1.0, 1), Err(Error::Config(_))));
         assert!(matches!(Gcra::new(f64::NAN, 1), Err(Error::Config(_))));
         assert!(matches!(Gcra::new(f64::INFINITY, 1), Err(Error::Config(_))));
+    }
+
+    #[test]
+    fn rejects_rate_whose_interval_rounds_to_zero() {
+        // A rate beyond ~1e9/s makes `1/rate` round to a zero nanosecond interval,
+        // which would otherwise silently admit without limit. Symmetric with Token
+        // Bucket's zero-interval rejection.
+        assert!(matches!(Gcra::new(1e18, 1), Err(Error::Config(_))));
     }
 }

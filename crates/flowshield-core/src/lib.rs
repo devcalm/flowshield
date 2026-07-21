@@ -4,6 +4,7 @@ pub mod decision;
 pub mod error;
 pub mod key;
 pub mod limiter;
+pub mod resp;
 pub mod store;
 pub mod time;
 

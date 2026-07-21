@@ -26,6 +26,7 @@
 use crate::algorithm::{Algorithm, nanos_to_duration};
 use crate::decision::{Allowed, Decision, Rejected};
 use crate::error::{Error, Result};
+use crate::resp::{RespProgram, RespScripted};
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -152,7 +153,11 @@ impl Algorithm for TokenBucket {
             // returned wait elapses but the request will still be rejected. That
             // mirrors classic token-bucket semantics and is the caller's contract.
             let missing = (cost - tokens) as u128;
-            let retry_nanos = missing * self.interval_nanos - carry_nanos as u128;
+            // Saturating so an extreme `cost × interval` can never overflow `u128` and
+            // wrap to a bogusly-small wait (the only non-saturating arithmetic left).
+            let retry_nanos = missing
+                .saturating_mul(self.interval_nanos)
+                .saturating_sub(carry_nanos as u128);
             Decision::Rejected(Rejected {
                 retry_after: nanos_to_duration(retry_nanos),
             })
@@ -175,6 +180,81 @@ impl Algorithm for TokenBucket {
             },
             decision,
         )
+    }
+}
+
+/// The Token Bucket transition as Lua, for RESP backends (ADR-006). Mirrors
+/// [`TokenBucket::step`] exactly at **microsecond** resolution (see
+/// [`crate::resp`] for why micros, and for the script ABI). The refill math, the
+/// carried sub-token remainder, the monotonic anchor (`last.max(now)`), and the
+/// retry-after formula all match the Rust implementation above.
+const TOKEN_BUCKET_LUA: &str = r#"
+-- Use effects replication so `redis.call('TIME')` before a write is allowed on
+-- Redis 3.2–6 too (a harmless no-op on Redis 7+/Valkey, which already default to it).
+redis.replicate_commands()
+
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+if now < 0 then
+  local t = redis.call('TIME')            -- { seconds, microseconds }
+  now = (tonumber(t[1]) * 1000000) + tonumber(t[2])
+end
+local ttl = tonumber(ARGV[2])
+local cost = tonumber(ARGV[3])
+local capacity = tonumber(ARGV[4])
+local interval = tonumber(ARGV[5])
+
+local st = redis.call('HMGET', key, 't', 'c', 'u')
+local tokens, carry, last
+if st[1] == false then
+  tokens = capacity; carry = 0; last = now
+else
+  tokens = tonumber(st[1]); carry = tonumber(st[2]); last = tonumber(st[3])
+end
+
+-- Refill: turn elapsed micros into whole tokens, exactly, carrying the remainder.
+local elapsed = now - last
+if elapsed < 0 then elapsed = 0 end
+local accrued = carry + elapsed
+local gained = math.floor(accrued / interval)
+local remainder = accrued - (gained * interval)
+local uncapped = tokens + gained
+if uncapped >= capacity then
+  tokens = capacity; carry = 0
+else
+  tokens = uncapped; carry = remainder
+end
+
+-- Advance the refill anchor monotonically (mirrors Rust `last_update.max(now)`).
+if now > last then last = now end
+
+local allowed, remaining, retry = 0, -1, 0
+if tokens >= cost then
+  tokens = tokens - cost
+  allowed = 1
+  remaining = tokens
+else
+  local missing = cost - tokens
+  retry = (missing * interval) - carry
+end
+
+redis.call('HSET', key, 't', tokens, 'c', carry, 'u', last)
+-- PEXPIRE takes milliseconds; round up so a key never expires before its TTL.
+redis.call('PEXPIRE', key, math.ceil(ttl / 1000))
+
+return { allowed, remaining, retry }
+"#;
+
+impl RespScripted for TokenBucket {
+    fn resp_program(&self) -> RespProgram {
+        // Quantise the nanosecond interval to microseconds once (see `crate::resp`).
+        // Clamp to ≥ 1µs: rates above 1e6/s exceed the RESP backend's resolution and
+        // are pinned to its ceiling rather than dividing by zero in Lua.
+        let interval_micros = (self.interval_nanos / 1_000).max(1) as i64;
+        RespProgram {
+            lua: TOKEN_BUCKET_LUA,
+            params: vec![self.capacity as i64, interval_micros],
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 [package]
 name = "flowshield"
-version = "0.1.1"
+version = "0.2.0"
 description = "Ergonomic traffic management and rate limiting for Rust — the public facade over flowshield-core."
 edition.workspace = true
 license.workspace = true
@@ -28,26 +28,34 @@ default = ["memory"]
 # In-memory storage backend — the default, zero-external-dependency store.
 memory = ["dep:flowshield-memory"]
 
+# Distributed backends (ADR-006, ADR-010). Additive and independent: enabling `redis`
+# never pulls in `valkey` and vice versa. Each is Tokio-coupled (ADR-016).
+redis = ["dep:flowshield-redis"]
+valkey = ["dep:flowshield-valkey"]
+
 # Observability, OFF by default (ADR-010, ADR-012). Each is additive and forwards to
 # the core crate, where the instrumentation lives (ADR-002). With both off the
 # decision path pays negligible overhead (NFR-023).
 metrics = ["flowshield-core/metrics"]
 tracing = ["flowshield-core/tracing"]
 
-# NOTE (ADR-018 + ADR-010): the remaining user-facing flags
-# (redis / valkey / tower / axum / actix) are hosted HERE on the facade and forward to
-# their implementation crates as those crates land. They are intentionally not declared
-# yet: a feature that enables a not-yet-existent optional dependency would fail to
-# compile. See docs/design/Plan.md.
+# NOTE (ADR-018 + ADR-010): the remaining user-facing flags (tower / axum / actix)
+# are hosted HERE on the facade and forward to their implementation crates as those
+# crates land (Phase 5). They are intentionally not declared yet: a feature that
+# enables a not-yet-existent optional dependency would fail to compile.
 
 [dependencies]
 # The facade re-exports the stable public API from the core crate. Both a version
 # (used when published to crates.io) and a path (used inside this workspace) are
 # specified so local builds and published builds resolve correctly.
-flowshield-core = { version = "0.1", path = "../flowshield-core" }
+flowshield-core = { version = "0.2", path = "../flowshield-core" }
 
 # The default in-memory backend, forwarded through the `memory` feature above.
-flowshield-memory = { version = "0.1", path = "../flowshield-memory", optional = true }
+flowshield-memory = { version = "0.2", path = "../flowshield-memory", optional = true }
+
+# Distributed backends, forwarded through the `redis` / `valkey` features above.
+flowshield-redis = { version = "0.2", path = "../flowshield-redis", optional = true }
+flowshield-valkey = { version = "0.2", path = "../flowshield-valkey", optional = true }
 
 [dev-dependencies]
 # Examples run on a real async runtime, the way a service would. Dev-only: never part

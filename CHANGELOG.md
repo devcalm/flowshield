@@ -9,6 +9,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 ### Added
+- **Phase 4 — Distributed backends: Redis + Valkey** (ADR-006), built on the family-B seam:
+  - `flowshield-resp` — shared, vendor-neutral RESP logic: runs an algorithm's Lua program server-side via `EVALSHA` (one atomic round trip, NFR-001), with a bounded connection pool (`deadpool-redis`), a **mandatory per-operation timeout**, and typed error surfacing for the limiter's degradation policy.
+  - `flowshield-redis` / `flowshield-valkey` — thin, independently-selectable backends with distinct identities; facade `redis` / `valkey` features.
+  - `flowshield_core::resp::{RespScripted, RespProgram}` — the family-B capability: an algorithm supplies a Lua transition. **Token Bucket and GCRA** both implement it, at microsecond resolution (Lua f64 keeps epoch-µs exact; see the module docs).
+  - **Server-authoritative time** by default (`redis.call('TIME')` inside the script, ADR-017) to remove inter-node clock skew; a client-time mode enables deterministic testing.
+  - **Oracle cross-check:** integration tests drive the same trace through the Lua backend and the memory backend and assert identical decisions — proving each Lua transition matches its Rust `step` exactly, for both algorithms on both servers.
+  - `docker-compose.yml` (Redis + Valkey) and a reachability-gated integration suite; a dedicated CI job runs it against service containers.
+  - Hardening from a pre-commit audit: GCRA now refreshes key TTL on rejection (parity with the memory backend and Token Bucket — prevents an actively-rejected key from expiring and over-admitting; covered by a real-time regression test); compiled scripts are cached (SHA-1 computed once, not per request); scripts use `redis.replicate_commands()` for Redis 3.2–6 compatibility; `Gcra::new` rejects rates whose interval rounds to zero; Token Bucket retry math is fully saturating; and `max_connections` pool sizing is exposed.
+
+### Changed
+- **Storage seam revision (ADR-019), a breaking change → `0.2.0`.** The single closure-based `StorageBackend<S>` seam is replaced by two execution families unified by a bridge, so the abstraction fits many providers rather than binding to Redis/Valkey:
+  - `LocalStore<S>` — family A: the backend provides isolation/retry around a **pure, re-runnable** transition (`Fn`, not `FnOnce`), covering memory today and transactional/optimistic backends (FoundationDB, Postgres, DynamoDB-OCC) later with no server code.
+  - `Evaluate<A>` — the single bridge trait the `Limiter` depends on ("store `S` can evaluate algorithm `A`"). Family-A stores satisfy it via the `evaluate_local` helper; server-side (family B) stores implement it directly.
+  - The conformance harness now targets `LocalStore` (`verify_local_store`) and permits a transition to run more than once (retry-aware).
+  - `flowshield-memory` re-implemented on `LocalStore` + `Evaluate`; behaviour unchanged. Server-native backends (Redis/Valkey via a `RespScripted` capability) build on this seam in Phase 4.
+
+### Added
 - **Phase 3 — Observability** (ADR-010, ADR-012), behind the additive, off-by-default `metrics` and `tracing` features:
   - Metrics: `flowshield_decisions_total` (labelled by `outcome`/`algorithm`/`backend`), `flowshield_backend_duration_seconds` (histogram), and `flowshield_degradations_total` (by `policy`), emitted from the limiter's single orchestration point.
   - Tracing: a `flowshield.check` span per decision plus a `warn` event on backend degradation; rate-limit keys are attached only as a non-reversible digest (`k#…`) — raw key material is never emitted (FR-073).

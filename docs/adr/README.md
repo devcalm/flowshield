@@ -34,6 +34,7 @@ ADRs are immutable once **Accepted**: to change a decision, add a new ADR that s
 | [016](./ADR-016-async-runtime.md) | Async Runtime Strategy | Accepted | OQ-06 |
 | [017](./ADR-017-time-source.md) | Time Source | Accepted | — |
 | [018](./ADR-018-facade-crate.md) | Public Facade Crate (`flowshield`) | Accepted | — |
+| [019](./ADR-019-storage-seam-revision.md) | Storage Seam Revision (two families + `Evaluate`) | Accepted | — |
 
 ## Relationship to other documents
 

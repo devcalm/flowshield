@@ -19,7 +19,7 @@ use flowshield_core::algorithm::gcra::Gcra;
 use flowshield_core::algorithm::token_bucket::TokenBucket;
 use flowshield_core::key::Key;
 use flowshield_core::limiter::{Limiter, LimiterBuilder};
-use flowshield_core::store::StorageBackend;
+use flowshield_core::store::Evaluate;
 use flowshield_core::time::TestClock;
 use flowshield_memory::MemoryStore;
 use proptest::prelude::*;
@@ -64,7 +64,7 @@ fn admitted_through_store<A, S>(
 ) -> u128
 where
     A: Algorithm,
-    S: StorageBackend<A::State>,
+    S: Evaluate<A>,
 {
     let key = Key::from("k");
     let mut current = Duration::ZERO;

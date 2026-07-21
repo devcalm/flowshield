@@ -132,21 +132,22 @@ Work is organized into sequential **phases**. Each phase lists an Objective, Mot
 - **Motivation:** Distributed limiting (UC-02) is the project's headline capability and the hardest correctness problem (R-01).
 - **Scope:** `flowshield-redis` and `flowshield-valkey` sharing a common RESP implementation; atomic check-and-consume server-side; connection pooling; mandatory operation timeout; degradation policy wired in.
 - **Tasks:**
-  1. ☐ Implement the shared RESP backend logic with server-side atomic check-and-consume. (ADR-006, FR-021)
-  2. ☐ Expose it as `flowshield-redis` and `flowshield-valkey` (separate crates/features). (ADR-006, FR-022)
-  3. ☐ Wire the mandatory backend timeout and the degradation policy (FailClosed default). (ADR-007, FR-023)
-  3a. ☐ Source decision time from the **store** (server-authoritative time) inside the atomic operation, not client clocks, to remove inter-node skew. (ADR-017, ADR-006)
-  4. ☐ Run both backends through the conformance suite. (FR-025)
-  5. ☐ Integration tests against real Redis and Valkey instances in CI. (NFR-034)
-  6. ☐ Fault-injection tests: backend slow/unreachable → verify FailClosed and (opt-in) FailOpen behavior + observability. (UC-03, NFR-011)
-  7. ☐ Document each backend's consistency guarantee and bounded over-admission. (ADR-005, NFR-002)
-- **Deliverables:** `flowshield-redis`, `flowshield-valkey`; real-backend integration tests; fault-injection tests; documented guarantees.
+  1. ✅ Implement the shared RESP backend logic with server-side atomic check-and-consume. (ADR-006, FR-021) — `flowshield-resp`: `RespStore` runs an algorithm's Lua program via `redis::Script` (EVALSHA + EVAL fallback), one atomic round trip.
+  2. ✅ Expose it as `flowshield-redis` and `flowshield-valkey` (separate crates/features). (ADR-006, FR-022) — thin newtypes over `flowshield-resp` with distinct identities/`kind` labels; facade `redis`/`valkey` features forward to them.
+  3. ✅ Wire the mandatory backend timeout and the degradation policy (FailClosed default). (ADR-007, FR-023) — every op wrapped in `tokio::time::timeout` → typed `Error::Timeout`; the limiter applies the configured policy (FailClosed default).
+  3a. ✅ Source decision time from the **store** (server-authoritative time) inside the atomic operation, not client clocks, to remove inter-node skew. (ADR-017, ADR-006) — `ClockSource::Server` (default) reads `redis.call('TIME')` inside the script; `Client` mode exists only for deterministic testing.
+  4. ✅ Run both backends through the conformance suite. (FR-025) — the family-A `LocalStore` harness does **not** apply to server-side (family-B) backends (they don't run the Rust `step`); parity is instead proven by the **Rust-vs-Lua oracle cross-check** — both algorithms, both servers, decision-for-decision (ADR-019).
+  5. ✅ Integration tests against real Redis and Valkey instances in CI. (NFR-034) — `docker-compose.yml` (Redis 6379 / Valkey 6380); reachability-gated tests; a dedicated CI `integration` job with `FLOWSHIELD_REQUIRE_*` set so unreachable ⇒ hard failure.
+  6. ✅ Fault-injection tests: backend slow/unreachable → verify FailClosed and (opt-in) FailOpen behavior + observability. (UC-03, NFR-011) — unreachable-server tests assert FailClosed rejects and FailOpen admits, via the timeout path; degradation observability (`flowshield_degradations_total` + warn event) is covered by the Phase-3 core tests.
+  7. ✅ Document each backend's consistency guarantee and bounded over-admission. (ADR-005, NFR-002) — ADR-005 per-backend table + a "Guarantees" section in the `flowshield-resp` docs (exact on primary; bounded only under replication/failover; microsecond resolution).
+- **Deliverables:** `flowshield-redis`, `flowshield-valkey`; real-backend integration tests; fault-injection tests; documented guarantees. — ✅ plus the shared `flowshield-resp` crate (ADR-006) and `RespScripted` family-B capability in core (ADR-019).
 - **Dependencies:** Phases 1–3.
 - **Risks:** R-01 (distributed correctness), R-02 (backend latency dominates), R-07 (fail-open misconfig) → conformance + fault-injection + timeout as gates; degradation observable.
 - **Acceptance Criteria:** Multiple processes coordinate on shared keys (FR-021, UC-02); Valkey is a supported v1 backend (FR-022); degradation matches configured policy with mandatory timeout (FR-023, NFR-011); per-backend guarantees documented (NFR-002, OQ-04).
-- **Exit Criteria:** Conformance + integration + fault-injection suites green against real instances; guarantees documented; DV-01 (numeric over-admission bound) flagged for Phase 6 characterization.
+- **Exit Criteria:** Conformance + integration + fault-injection suites green against real instances; guarantees documented; DV-01 (numeric over-admission bound) flagged for Phase 6 characterization. — ✅ oracle cross-check + integration + fault-injection green against real Redis & Valkey; guarantees documented; DV-01 remains flagged for Phase 6.
 - **Estimated Complexity:** L.
-- **Implements ADRs:** 005, 006, 007.
+- **Implements ADRs:** 005, 006, 007 (and 019, the seam revision this phase is built on).
+- **Status:** ✅ Complete (Redis + Valkey, both algorithms). Multi-node over-admission characterization (DV-01) deferred to Phase 6 as planned.
 
 ---
 

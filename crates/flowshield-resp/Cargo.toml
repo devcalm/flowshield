@@ -1,0 +1,39 @@
+[package]
+name = "flowshield-resp"
+version = "0.2.0"
+description = "Shared RESP (Redis/Valkey) backend logic for FlowShield — atomic, server-side rate-limit state via Lua."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+
+# Packaging allowlist (see ADR-003). `include` is an allowlist so new files are
+# excluded by default; repository docs live at the workspace root, outside this package.
+include = [
+    "src/**/*.rs",
+    "README.md",
+]
+
+[dependencies]
+# The bridge (`Evaluate`) and the family-B capability (`RespScripted`) live in core.
+flowshield-core = { version = "0.2", path = "../flowshield-core" }
+
+# RESP client + pool (ADR-016: Tokio-coupled backend, disclosed here at the crate
+# boundary). `redis` provides the async `Script` (EVALSHA with EVAL fallback);
+# `deadpool-redis` provides the bounded connection pool (ADR-006).
+redis = { version = "0.27", default-features = false, features = ["tokio-comp", "script"] }
+deadpool-redis = "0.18"
+
+# Only `tokio::time::timeout` is used from tokio — the mandatory per-operation
+# timeout (ADR-006, ADR-007). No runtime is started by the library itself.
+tokio = { workspace = true, features = ["time"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+# The cross-check test drives the same algorithm through the memory backend as an
+# oracle for the Lua (ADR-019).
+flowshield-memory = { version = "0.2", path = "../flowshield-memory" }

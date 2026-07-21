@@ -33,7 +33,7 @@ Most users install the facade crate, **`flowshield`**:
 
 ```toml
 [dependencies]
-flowshield = "0.1"
+flowshield = "0.2"
 ```
 
 Once the API lands (Phase 1), typical usage will be:

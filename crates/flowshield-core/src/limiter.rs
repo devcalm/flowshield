@@ -3,7 +3,7 @@ use crate::decision::{Allowed, Decision, Rejected};
 use crate::error::{Error, Result};
 use crate::key::Key;
 use crate::observe::{self, Labels};
-use crate::store::StorageBackend;
+use crate::store::Evaluate;
 use crate::time::{MonotonicClock, TimeSource};
 use std::time::Duration;
 
@@ -52,7 +52,7 @@ pub struct Limiter<A: Algorithm, S, C = MonotonicClock> {
 impl<A, S, C> Limiter<A, S, C>
 where
     A: Algorithm,
-    S: StorageBackend<A::State>,
+    S: Evaluate<A>,
     C: TimeSource,
 {
     pub async fn check(&self, key: &Key) -> Result<Decision> {
@@ -66,7 +66,7 @@ where
         // FR-052). `.instrument` (rather than a held guard) is the async-correct way
         // to span across an await. When `tracing` is off the wrap disappears and the
         // inner future is awaited directly, at no cost.
-        let fut = self.evaluate(key, cost);
+        let fut = self.decide(key, cost);
         #[cfg(feature = "tracing")]
         let fut = {
             use tracing::Instrument as _;
@@ -77,19 +77,20 @@ where
 
     /// The actual decision, uninstrumented at the boundary but emitting metrics and
     /// events from within (so they land inside the [`check_n`](Self::check_n) span).
-    async fn evaluate(&self, key: &Key, cost: u64) -> Result<Decision> {
+    ///
+    /// The seam is [`Evaluate`]: the store is handed the algorithm and performs the
+    /// atomic transition its own way (client-side under a lock for family A;
+    /// server-side for family B), so this method is agnostic to which family the
+    /// backend belongs to (ADR-019).
+    async fn decide(&self, key: &Key, cost: u64) -> Result<Decision> {
         let now = self.clock.now();
-        let algo = &self.algorithm;
 
         // Time the backend round-trip (compiled out unless `metrics` is on — the
         // `Timer` is a zero-sized no-op otherwise, so no clock is read).
         let timer = observe::Timer::start();
         let result = self
             .store
-            .update(key, now, self.ttl, move |st| {
-                let s = st.unwrap_or_else(|| algo.initial(now));
-                algo.step(s, now, cost)
-            })
+            .evaluate(&self.algorithm, key, now, self.ttl, cost)
             .await;
         observe::record_backend_latency(self.labels, timer);
 
@@ -132,7 +133,7 @@ pub struct LimiterBuilder<A, S, C> {
     degrade: DegradationPolicy,
 }
 
-impl<A: Algorithm, S: StorageBackend<A::State>> LimiterBuilder<A, S, MonotonicClock> {
+impl<A: Algorithm, S: Evaluate<A>> LimiterBuilder<A, S, MonotonicClock> {
     pub fn new(algorithm: A, store: S) -> Self {
         Self {
             algorithm,
@@ -143,7 +144,7 @@ impl<A: Algorithm, S: StorageBackend<A::State>> LimiterBuilder<A, S, MonotonicCl
         }
     }
 }
-impl<A: Algorithm, S: StorageBackend<A::State>, C: TimeSource> LimiterBuilder<A, S, C> {
+impl<A: Algorithm, S: Evaluate<A>, C: TimeSource> LimiterBuilder<A, S, C> {
     pub fn ttl(mut self, ttl: Duration) -> Self {
         self.ttl = ttl;
         self
@@ -233,22 +234,63 @@ mod tests {
     }
 
     // A backend that always fails, to exercise the degradation path independently of
-    // any real store. Generic over the state type so it slots under any algorithm.
+    // any real store. It implements the `Evaluate` bridge *directly* (not via
+    // `LocalStore`), so it also demonstrates that the seam accommodates a family-B
+    // store — one that does not run the client-side Rust transition (ADR-019).
     struct FailingStore;
-    impl<S: Send + 'static> StorageBackend<S> for FailingStore {
+    impl<A: Algorithm> Evaluate<A> for FailingStore {
         fn kind(&self) -> &'static str {
             "failing"
         }
-        fn update(
+        fn evaluate(
             &self,
+            _algo: &A,
             _key: &Key,
             _now: Duration,
             _ttl: Duration,
-            _step: impl FnOnce(Option<S>) -> (S, Decision) + Send,
+            _cost: u64,
         ) -> impl Future<Output = Result<Decision>> + Send {
             std::future::ready(Err(Error::Timeout {
                 elapsed: Duration::from_millis(5),
             }))
+        }
+    }
+
+    // A minimal, *positive* family-B-style store: it decides without any
+    // `LocalStore` and without running the algorithm's Rust `step` — exactly the
+    // shape a server-side backend (Redis) will take. It exists to prove the
+    // `Evaluate` seam is genuinely family-agnostic and that a second, independent
+    // `Evaluate` impl coheres alongside the memory one (ADR-019).
+    struct AlwaysAllow;
+    impl<A: Algorithm> Evaluate<A> for AlwaysAllow {
+        fn kind(&self) -> &'static str {
+            "always-allow"
+        }
+        fn evaluate(
+            &self,
+            _algo: &A,
+            _key: &Key,
+            _now: Duration,
+            _ttl: Duration,
+            _cost: u64,
+        ) -> impl Future<Output = Result<Decision>> + Send {
+            std::future::ready(Ok(Decision::allowed(None)))
+        }
+    }
+
+    #[test]
+    fn non_local_store_drives_the_limiter() {
+        // Proves a store that satisfies `Evaluate` directly (no `LocalStore`, no Rust
+        // `step`) works end-to-end through the limiter — the family-B path.
+        let limiter = LimiterBuilder::new(TokenBucket::per_second(1, 1).unwrap(), AlwaysAllow)
+            .build()
+            .unwrap();
+        for _ in 0..5 {
+            assert!(
+                block_on(limiter.check(&Key::from("k")))
+                    .unwrap()
+                    .is_allowed()
+            );
         }
     }
 

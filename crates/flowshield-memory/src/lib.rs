@@ -1,11 +1,15 @@
 #![forbid(unsafe_code)]
 //! # FlowShield — in-memory storage backend
 //!
-//! `flowshield-memory` is the default [`StorageBackend`] for FlowShield (ADR-005,
-//! ADR-008): an in-process store of per-key limiter state with **exact** semantics
-//! and no external dependencies. It is what a single-node deployment uses, and the
-//! behavioural reference every distributed backend is measured against via the
-//! shared conformance harness (ADR-006).
+//! `flowshield-memory` is the default store for FlowShield (ADR-005, ADR-008): an
+//! in-process store of per-key limiter state with **exact** semantics and no external
+//! dependencies. It is what a single-node deployment uses, and the behavioural
+//! reference every family-A backend is measured against via the shared conformance
+//! harness (ADR-006, ADR-019).
+//!
+//! It is a **family-A** backend (ADR-019): it implements [`LocalStore`] (running the
+//! algorithm's pure transition under a shard lock) and bridges to the limiter via
+//! [`Evaluate`].
 //!
 //! Three properties define it:
 //!
@@ -20,7 +24,7 @@
 //!   unrelated keys rarely contend on the same lock (NFR-004).
 //!
 //! All time is the injected monotonic clock (ADR-017); the store reads no wall
-//! clock. The `update` future is always ready on first poll, so the backend needs
+//! clock. The `transact` future is always ready on first poll, so the backend needs
 //! no async runtime (ADR-016).
 //!
 //! ```
@@ -35,10 +39,11 @@
 
 mod lru;
 
+use flowshield_core::algorithm::Algorithm;
 use flowshield_core::decision::Decision;
 use flowshield_core::error::{Error, Result};
 use flowshield_core::key::Key;
-use flowshield_core::store::StorageBackend;
+use flowshield_core::store::{Evaluate, LocalStore, evaluate_local};
 use lru::LruShard;
 use std::future::Future;
 use std::hash::BuildHasher;
@@ -54,7 +59,8 @@ pub const DEFAULT_CAPACITY: usize = 100_000;
 /// and a map each; past this there is no realistic benefit.
 const MAX_SHARDS: usize = 4096;
 
-/// In-memory [`StorageBackend`]: bounded, expiring, sharded per-key state.
+/// In-memory family-A store ([`LocalStore`] + [`Evaluate`]): bounded, expiring,
+/// sharded per-key state.
 ///
 /// # Why LRU eviction
 ///
@@ -73,7 +79,8 @@ const MAX_SHARDS: usize = 4096;
 /// Keys are hashed to one of `shards` independently-locked partitions. The
 /// ADR-005 atomic check-and-consume is the shard `Mutex` held across the whole
 /// load → `step` → store sequence, so two calls for the same key can never
-/// interleave, while calls to keys in different shards proceed in parallel.
+/// interleave, while calls to keys in different shards proceed in parallel. This is
+/// the [`LocalStore::transact`] contract.
 pub struct MemoryStore<S> {
     shards: Box<[Mutex<LruShard<S>>]>,
     hasher: std::collections::hash_map::RandomState,
@@ -164,30 +171,47 @@ impl<S: Send + 'static> Default for MemoryStore<S> {
     }
 }
 
-impl<S: Send + 'static> StorageBackend<S> for MemoryStore<S> {
-    fn kind(&self) -> &'static str {
-        "memory"
-    }
-
-    fn update(
+impl<S: Send + 'static> LocalStore<S> for MemoryStore<S> {
+    fn transact(
         &self,
         key: &Key,
         now: Duration,
         ttl: Duration,
-        step: impl FnOnce(Option<S>) -> (S, Decision) + Send,
+        step: impl Fn(Option<S>) -> (S, Decision) + Send,
     ) -> impl Future<Output = Result<Decision>> + Send {
         let mut shard = lock(&self.shards[self.shard_index(key)]);
         // Atomic check-and-consume (ADR-005): load (treating expired as absent),
         // apply the pure transition, and write the result back — all under the one
-        // lock, so no two calls for this key can interleave. Writing via
-        // `insert_front` also reinserts the key at the MRU position, which is the
-        // LRU bookkeeping.
+        // lock, so no two calls for this key can interleave. The shard lock gives
+        // exclusive access, so a single `step` application suffices; the `Fn` bound
+        // only permits re-runs (which transactional backends need), it does not
+        // require them. Writing via `insert_front` also reinserts the key at the MRU
+        // position, which is the LRU bookkeeping.
         let current = shard.take_current(key, now);
         let (new_state, decision) = step(current);
         shard.insert_front(key.clone(), new_state, now.saturating_add(ttl));
         // Synchronous work; hand back an already-ready future. The guard drops here,
         // before the future is returned, so it is never held across an await point.
         std::future::ready(Ok(decision))
+    }
+}
+
+// Family-A bridge to the limiter (ADR-019): forward to the shared `evaluate_local`
+// helper, which builds the pure transition and drives `transact`.
+impl<A: Algorithm> Evaluate<A> for MemoryStore<A::State> {
+    fn evaluate(
+        &self,
+        algo: &A,
+        key: &Key,
+        now: Duration,
+        ttl: Duration,
+        cost: u64,
+    ) -> impl Future<Output = Result<Decision>> + Send {
+        evaluate_local(self, algo, key, now, ttl, cost)
+    }
+
+    fn kind(&self) -> &'static str {
+        "memory"
     }
 }
 
@@ -284,12 +308,12 @@ mod tests {
         let key = Key::from("k");
         let ttl = Duration::from_secs(60);
 
-        block_on(store.update(&key, Duration::ZERO, ttl, |prev| {
+        block_on(store.transact(&key, Duration::ZERO, ttl, |prev| {
             assert!(prev.is_none());
             (1, allow())
         }))
         .unwrap();
-        block_on(store.update(&key, Duration::ZERO, ttl, |prev| {
+        block_on(store.transact(&key, Duration::ZERO, ttl, |prev| {
             assert_eq!(prev, Some(1));
             (2, reject())
         }))
@@ -301,8 +325,8 @@ mod tests {
         let store: MemoryStore<u32> = MemoryStore::new();
         let key = Key::from("k");
         let ttl = Duration::from_secs(10);
-        block_on(store.update(&key, Duration::ZERO, ttl, |_| (7, allow()))).unwrap();
-        block_on(store.update(&key, Duration::from_secs(11), ttl, |prev| {
+        block_on(store.transact(&key, Duration::ZERO, ttl, |_| (7, allow()))).unwrap();
+        block_on(store.transact(&key, Duration::from_secs(11), ttl, |prev| {
             assert!(prev.is_none());
             (0, allow())
         }))
@@ -354,7 +378,7 @@ mod tests {
         let ttl = Duration::from_secs(3600);
         for i in 0..100_000u64 {
             let key = Key::from(format!("k-{i}"));
-            block_on(store.update(&key, Duration::ZERO, ttl, |_| (i as u32, allow()))).unwrap();
+            block_on(store.transact(&key, Duration::ZERO, ttl, |_| (i as u32, allow()))).unwrap();
         }
         assert!(
             store.len() <= store.capacity(),
