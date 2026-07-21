@@ -72,7 +72,7 @@
 /// The stable, user-facing API, re-exported from `flowshield-core`.
 #[doc(inline)]
 pub use flowshield_core::{
-    algorithm::{Algorithm, token_bucket::TokenBucket},
+    algorithm::{Algorithm, gcra::Gcra, token_bucket::TokenBucket},
     composite::{Combined, DynLimiter, LimiterSet, combine},
     decision::{Allowed, Decision, Rejected},
     error::{Error, Result},

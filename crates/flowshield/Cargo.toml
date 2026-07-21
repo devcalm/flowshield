@@ -42,3 +42,18 @@ flowshield-core = { version = "0.1", path = "../flowshield-core" }
 
 # The default in-memory backend, forwarded through the `memory` feature above.
 flowshield-memory = { version = "0.1", path = "../flowshield-memory", optional = true }
+
+[dev-dependencies]
+# Examples run on a real async runtime, the way a service would. Dev-only: never part
+# of the published crate (ADR-016 keeps a runtime out of the library itself).
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+
+# Examples use the in-memory backend, so they only build when the `memory` feature is
+# on. `required-features` lets `cargo build --no-default-features` skip them cleanly.
+[[example]]
+name = "background_worker"
+required-features = ["memory"]
+
+[[example]]
+name = "layered_quotas"
+required-features = ["memory"]

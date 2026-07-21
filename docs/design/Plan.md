@@ -91,10 +91,10 @@ Work is organized into sequential **phases**. Each phase lists an Objective, Mot
   1. ✅ Implement the in-memory backend with bounded, expiring per-key state — `flowshield-memory` (sharded LRU + lazy TTL expiry). (FR-020, FR-071)
   2. ✅ Implement Token Bucket (default). (ADR-008, FR-012)
   3. ✅ Implement GCRA. (ADR-008, FR-012)
-  4. ◑ Run both algorithms + memory backend through the conformance suite. (FR-025) — memory backend passes the `StorageBackend` contract harness; algorithm behaviour is covered by the property suite. (Remaining: exercise Token Bucket **and** GCRA end-to-end through the memory store.)
+  4. ✅ Run both algorithms + memory backend through the conformance suite. (FR-025) — memory backend passes the `StorageBackend` contract harness; Token Bucket and GCRA are driven end-to-end through the `Limiter` + `MemoryStore` in `tests/limiter_behaviour.rs`.
   5. ✅ Implement the thin composition helper (evaluate-all, binding-limit, max retry-after) — `core::composite`: pure `combine` + type-erased `LimiterSet`. (ADR-004, FR-013)
-  6. ◑ Property tests for admission invariants; stress test for high-cardinality/adversarial keys. (NFR-010, NFR-034) — adversarial high-cardinality + concurrency stress done in `flowshield-memory`; algorithm property suite exists in core. (Remaining: admission-invariant property tests through the store.)
-  7. ☐ Example: rate-limit a background/non-HTTP workload. (FR-004, UC-05)
+  6. ✅ Property tests for admission invariants; stress test for high-cardinality/adversarial keys. (NFR-010, NFR-034) — (σ, ρ) safety + liveness proven end-to-end through the store in `tests/admission_properties.rs`; adversarial high-cardinality + concurrency stress in `tests/stress.rs` / `tests/concurrency.rs`.
+  7. ✅ Example: rate-limit a background/non-HTTP workload. (FR-004, UC-05) — `flowshield/examples/background_worker.rs` (throttled worker loop) and `layered_quotas.rs` (composite limits); both runnable via `cargo run --example`.
 - **Deliverables:** `flowshield-memory`; two algorithms; composition helper; property + stress tests; a runnable non-HTTP example.
 - **Dependencies:** Phase 1.
 - **Risks:** R-04 (unbounded memory) → enforced eviction + adversarial stress test as acceptance gate.
