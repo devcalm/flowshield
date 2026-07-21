@@ -157,19 +157,20 @@ Work is organized into sequential **phases**. Each phase lists an Objective, Mot
 - **Motivation:** Most users (P-01) adopt via middleware (UC-01); isolation protects the core from web-framework churn (R-06).
 - **Scope:** `flowshield-tower` (foundational), `flowshield-axum` (builds on Tower where practical), `flowshield-actix` (own integration); key extraction from requests; HTTP 429 + `Retry-After` on rejection.
 - **Tasks:**
-  1. ☐ Implement the Tower integration (layer/service). (ADR-009, FR-030)
-  2. ☐ Implement the Axum integration + a default client-address `KeyExtractor`. (FR-031, FR-034)
-  3. ☐ Implement the Actix integration. (FR-032)
-  4. ☐ Map rejection → HTTP 429 with correct `Retry-After` from the decision metadata. (FR-011)
-  5. ☐ Verify crate independence (Axum build excludes Actix and vice versa). (FR-033, NFR-021)
-  6. ☐ Examples per framework. (NFR-041)
-- **Deliverables:** Three integration crates; per-framework examples; independence test.
+  1. ✅ Implement the Tower integration (layer/service). (ADR-009, FR-030) — `flowshield-tower`: `FlowShieldLayer`/`FlowShieldService` holding an `Arc<dyn DynLimiter>`; pinned to `tower-service`/`tower-layer` (not all of `tower`) to insulate from churn.
+  2. ✅ Implement the Axum integration + a default client-address `KeyExtractor`. (FR-031, FR-034) — `flowshield-axum` reuses the Tower layer and adds `ConnectInfoKeyExtractor` + `per_client_ip`; safe peer-IP default (`PeerAddrKeyExtractor` / `ConnectInfoKeyExtractor`), with `HeaderKeyExtractor` and a clearly-warned `ForwardedForKeyExtractor` for other keying.
+  3. ✅ Implement the Actix integration. (FR-032) — `flowshield-actix`: standalone `Transform`/`Service` (not Tower-based), `EitherBody` short-circuit to 429, `!Send` per-worker futures; peer-IP + header + realip extractors.
+  4. ✅ Map rejection → HTTP 429 with correct `Retry-After` from the decision metadata. (FR-011) — `429 Too Many Requests` + `Retry-After` (seconds, rounded up); tested in all three crates and verified over real HTTP in the axum + actix examples.
+  5. ✅ Verify crate independence (Axum build excludes Actix and vice versa). (FR-033, NFR-021) — `cargo tree` confirms: `flowshield-tower` and `flowshield-actix` pull in no other integration; `flowshield-axum`'s only framework edge is the deliberate Tower reuse. Actix depends on neither Tower nor Axum.
+  6. ✅ Examples per framework. (NFR-041) — runnable `flowshield-axum/examples/axum_server.rs` and `flowshield-actix/examples/actix_server.rs` (both validated over real HTTP); the Tower layer is exercised by its own tests and, end-to-end, by the Axum example (which wraps it).
+- **Deliverables:** Three integration crates; per-framework examples; independence test. — ✅ `flowshield-tower`, `flowshield-axum`, `flowshield-actix`, each with tests + facade `tower`/`axum`/`actix` features (namespaced module re-exports to avoid type-name clashes).
 - **Dependencies:** Phases 1–2 (4 for distributed demos).
 - **Risks:** R-06 (framework churn) → thin integrations pinned to stable seams; integrations versioned independently.
 - **Acceptance Criteria:** Each framework can rate-limit a route with documented setup (FR-030–FR-032); rejections carry `Retry-After` (FR-011); integrations are mutually independent (FR-033).
 - **Exit Criteria:** All three examples run; independence verified in CI; docs published.
 - **Estimated Complexity:** L.
 - **Implements ADRs:** 003, 009.
+- **Status:** ✅ Complete — `flowshield-tower`, `flowshield-axum`, and `flowshield-actix` all shipped (Layer/Service & Transform/Service, peer-IP + header + forwarded/realip extractors, 429/Retry-After, runnable examples, tests, facade features). Cross-framework independence verified.
 
 ---
 

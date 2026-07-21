@@ -1,0 +1,32 @@
+[package]
+name = "flowshield-tower"
+version = "0.2.0"
+description = "Tower middleware integration for FlowShield — per-key rate limiting as a Layer/Service, with 429 + Retry-After."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+
+include = [
+    "src/**/*.rs",
+    "README.md",
+]
+
+[dependencies]
+flowshield-core = { version = "0.2", path = "../flowshield-core" }
+# The integration is pinned to the tiny, ultra-stable trait crates rather than all of
+# `tower`, to keep it insulated from Tower's wider version churn (ADR-009, R-06).
+tower-layer = "0.3"
+tower-service = "0.3"
+http = "1"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+# `service_fn` + `ServiceExt::oneshot` drive the layer in tests.
+tower = { version = "0.5", features = ["util"] }
+# A real limiter for the tests.
+flowshield-memory = { version = "0.2", path = "../flowshield-memory" }

@@ -1,0 +1,31 @@
+[package]
+name = "flowshield-actix"
+version = "0.2.0"
+description = "Actix Web integration for FlowShield — per-key rate limiting middleware with 429 + Retry-After."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+
+include = [
+    "src/**/*.rs",
+    "README.md",
+]
+
+[dependencies]
+flowshield-core = { version = "0.2", path = "../flowshield-core" }
+# Actix Web does not use Tower's Service/Layer model, so this is a standalone
+# integration (ADR-009) — it does NOT depend on flowshield-tower.
+actix-web = { version = "4", default-features = false }
+
+[dev-dependencies]
+flowshield-memory = { version = "0.2", path = "../flowshield-memory" }
+# The example runs a real Actix HTTP server; macros + server features are dev-only.
+actix-web = { version = "4", default-features = false, features = ["macros"] }
+
+[[example]]
+name = "actix_server"

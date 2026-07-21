@@ -8,6 +8,9 @@ members = [
     "crates/flowshield-resp",
     "crates/flowshield-redis",
     "crates/flowshield-valkey",
+    "crates/flowshield-tower",
+    "crates/flowshield-axum",
+    "crates/flowshield-actix",
 ]
 
 [workspace.package]

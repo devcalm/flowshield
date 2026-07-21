@@ -33,16 +33,18 @@ memory = ["dep:flowshield-memory"]
 redis = ["dep:flowshield-redis"]
 valkey = ["dep:flowshield-valkey"]
 
+# Framework integrations (ADR-009, ADR-010). Independent and additive. `axum` also
+# enables `tower`, since the Axum integration builds on the Tower layer; `actix` is
+# fully standalone (no Tower).
+tower = ["dep:flowshield-tower"]
+axum = ["dep:flowshield-axum", "tower"]
+actix = ["dep:flowshield-actix"]
+
 # Observability, OFF by default (ADR-010, ADR-012). Each is additive and forwards to
 # the core crate, where the instrumentation lives (ADR-002). With both off the
 # decision path pays negligible overhead (NFR-023).
 metrics = ["flowshield-core/metrics"]
 tracing = ["flowshield-core/tracing"]
-
-# NOTE (ADR-018 + ADR-010): the remaining user-facing flags (tower / axum / actix)
-# are hosted HERE on the facade and forward to their implementation crates as those
-# crates land (Phase 5). They are intentionally not declared yet: a feature that
-# enables a not-yet-existent optional dependency would fail to compile.
 
 [dependencies]
 # The facade re-exports the stable public API from the core crate. Both a version
@@ -56,6 +58,11 @@ flowshield-memory = { version = "0.2", path = "../flowshield-memory", optional =
 # Distributed backends, forwarded through the `redis` / `valkey` features above.
 flowshield-redis = { version = "0.2", path = "../flowshield-redis", optional = true }
 flowshield-valkey = { version = "0.2", path = "../flowshield-valkey", optional = true }
+
+# Framework integrations, forwarded through the `tower` / `axum` / `actix` features.
+flowshield-tower = { version = "0.2", path = "../flowshield-tower", optional = true }
+flowshield-axum = { version = "0.2", path = "../flowshield-axum", optional = true }
+flowshield-actix = { version = "0.2", path = "../flowshield-actix", optional = true }
 
 [dev-dependencies]
 # Examples run on a real async runtime, the way a service would. Dev-only: never part

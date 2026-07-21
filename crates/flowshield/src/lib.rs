@@ -105,3 +105,24 @@ pub use flowshield_redis::RedisStore;
 #[cfg(feature = "valkey")]
 #[doc(inline)]
 pub use flowshield_valkey::ValkeyStore;
+
+// Framework integrations are re-exported as **namespaced modules** rather than into the
+// crate root: each has its own `PeerAddrKeyExtractor` / `HeaderKeyExtractor`, so globbing
+// them together would collide. Access them as `flowshield::tower::…`, `flowshield::axum::…`,
+// `flowshield::actix::…` (ADR-009). Depend on the integration crates directly for identical
+// surfaces.
+
+/// The Tower middleware integration (`429 + Retry-After`), enabled by the `tower` feature.
+#[cfg(feature = "tower")]
+#[doc(inline)]
+pub use flowshield_tower as tower;
+
+/// The Axum integration, enabled by the `axum` feature.
+#[cfg(feature = "axum")]
+#[doc(inline)]
+pub use flowshield_axum as axum;
+
+/// The Actix Web integration, enabled by the `actix` feature.
+#[cfg(feature = "actix")]
+#[doc(inline)]
+pub use flowshield_actix as actix;

@@ -9,6 +9,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 ### Added
+- **Phase 5 — Framework integrations: Tower, Axum, Actix** (ADR-009). Each returns a
+  standards-correct `429 Too Many Requests` + `Retry-After` (rounded up to whole seconds)
+  on rejection and passes allowed requests through; all hold an `Arc<dyn DynLimiter>` so one
+  middleware type serves every algorithm/backend.
+  - `flowshield-tower` — the foundational Tower `Layer`/`Service`, pinned to the small
+    `tower-service`/`tower-layer` trait crates to resist Tower churn. Extractors:
+    `PeerAddrKeyExtractor` (default, direct peer IP — spoof-resistant), `HeaderKeyExtractor`
+    (e.g. API key), `ForwardedForKeyExtractor` (**trusted-proxy-only**; client-spoofable).
+  - `flowshield-axum` — Axum ergonomics over the Tower layer: `ConnectInfoKeyExtractor` +
+    `per_client_ip`, runnable `axum_server` example.
+  - `flowshield-actix` — standalone Actix `Transform`/`Service` (not Tower-based;
+    `EitherBody` short-circuit, `!Send` per-worker futures). Extractors: peer-IP (default),
+    header, and `RealIpKeyExtractor` (**trusted-proxy-only**). Runnable `actix_server` example.
+  - Facade `tower` / `axum` / `actix` features, re-exported as namespaced modules
+    (`flowshield::tower`, `::axum`, `::actix`) since the integrations share type names.
+  - **Independence** (FR-033) verified via `cargo tree`: Tower and Actix pull in no other
+    integration; Axum's only framework edge is the deliberate Tower reuse. Both examples
+    validated over real HTTP (200s then 429s with `Retry-After`).
+
 - **Phase 4 — Distributed backends: Redis + Valkey** (ADR-006), built on the family-B seam:
   - `flowshield-resp` — shared, vendor-neutral RESP logic: runs an algorithm's Lua program server-side via `EVALSHA` (one atomic round trip, NFR-001), with a bounded connection pool (`deadpool-redis`), a **mandatory per-operation timeout**, and typed error surfacing for the limiter's degradation policy.
   - `flowshield-redis` / `flowshield-valkey` — thin, independently-selectable backends with distinct identities; facade `redis` / `valkey` features.

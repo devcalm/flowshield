@@ -26,5 +26,8 @@ flowshield-resp = { version = "0.2", path = "../flowshield-resp" }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
 # The memory backend is the oracle the Lua is cross-checked against (ADR-019).
 flowshield-memory = { version = "0.2", path = "../flowshield-memory" }
-# Direct RESP access for the tests' reachability probe and per-test key hygiene.
+# Dev-only, for the integration test's reachability probe. This is the redis-rs
+# client, used here directly only by the tests; the real backend logic (pool + Lua
+# execution) lives in flowshield-resp, which both flowshield-redis and flowshield-valkey
+# wrap (ADR-006).
 redis = { version = "0.27", default-features = false, features = ["tokio-comp", "script"] }
