@@ -9,6 +9,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 ### Added
+- **`X-RateLimit-Remaining` response header** across all three HTTP integrations
+  (Tower/Axum/Actix). Allowed responses now carry the caller's remaining headroom when the
+  algorithm reports it (Token Bucket / GCRA always do); a `429` reports `0`. Backed by a new
+  `Decision::remaining()` accessor in `flowshield-core`.
+
+### Fixed
+- **`ForwardedForKeyExtractor` (Tower/Axum) mis-parsed the RFC 7239 `Forwarded` header as
+  `X-Forwarded-For`.** It preferred the `Forwarded` header (grammar `for=1.2.3.4;proto=…`)
+  and parsed it as a bare comma-separated IP list, so a present `Forwarded` header produced a
+  garbage key like `for=1.2.3.4;proto=https` and scattered one client across buckets. It now
+  reads **only** `X-Forwarded-For` (left-most entry), matching its documented behaviour;
+  empty values fall to the `unknown-forwarded` bucket. Added regression tests.
+
+### Added
 - **Phase 5 — Framework integrations: Tower, Axum, Actix** (ADR-009). Each returns a
   standards-correct `429 Too Many Requests` + `Retry-After` (rounded up to whole seconds)
   on rejection and passes allowed requests through; all hold an `Arc<dyn DynLimiter>` so one

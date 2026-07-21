@@ -53,6 +53,11 @@ use std::time::Duration;
 use tower_layer::Layer;
 use tower_service::Service;
 
+/// The `X-RateLimit-Remaining` response header: how many further requests the caller
+/// may make right now. Emitted on allowed responses when the algorithm reports it, and
+/// set to `0` on a `429`.
+const X_RATELIMIT_REMAINING: HeaderName = HeaderName::from_static("x-ratelimit-remaining");
+
 /// Keys a request on the **direct peer IP address**, read from a [`SocketAddr`] stored
 /// in the request's extensions (which the server/connector must inject). This is the
 /// safe default: unlike `X-Forwarded-For`, the peer address cannot be spoofed by the
@@ -118,12 +123,18 @@ pub struct ForwardedForKeyExtractor;
 
 impl<B> KeyExtractor<Request<B>> for ForwardedForKeyExtractor {
     fn extract_key(&self, req: &Request<B>) -> Key {
+        // `X-Forwarded-For` is a comma-separated list of IPs; the left-most is the
+        // originating client. Read *only* that header — the RFC 7239 `Forwarded`
+        // header is a different grammar (`for=1.2.3.4;proto=https;by=…`) and must not
+        // be parsed as a bare IP list, or the key becomes `for=1.2.3.4;proto=…` noise
+        // and the same client scatters across buckets.
         req.headers()
-            .get(header::FORWARDED)
-            .or_else(|| req.headers().get("x-forwarded-for"))
+            .get("x-forwarded-for")
             .and_then(|v| v.to_str().ok())
             .and_then(|s| s.split(',').next())
-            .map(|s| Key::from(s.trim()))
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(Key::from)
             .unwrap_or_else(|| Key::from("unknown-forwarded"))
     }
 }
@@ -224,7 +235,18 @@ where
         Box::pin(async move {
             let key = extractor.extract_key(&req);
             match limiter.check_dyn(&key).await {
-                Ok(decision) if decision.is_allowed() => inner.call(req).await,
+                Ok(decision) if decision.is_allowed() => {
+                    // Pass through, annotating the downstream response with the caller's
+                    // remaining headroom when the algorithm can report it (FR-011).
+                    let remaining = decision.remaining();
+                    let mut response = inner.call(req).await?;
+                    if let Some(remaining) = remaining {
+                        response
+                            .headers_mut()
+                            .insert(X_RATELIMIT_REMAINING, HeaderValue::from(remaining));
+                    }
+                    Ok(response)
+                }
                 Ok(decision) => {
                     // Normal rejection → 429 with the reported wait (ADR-009, FR-011).
                     let retry = decision.retry_after().unwrap_or(Duration::from_secs(1));
@@ -243,10 +265,13 @@ where
 fn too_many_requests<B: Default>(retry_after: Duration) -> Response<B> {
     let mut response = Response::new(B::default());
     *response.status_mut() = StatusCode::TOO_MANY_REQUESTS;
-    response.headers_mut().insert(
+    let headers = response.headers_mut();
+    headers.insert(
         header::RETRY_AFTER,
         HeaderValue::from(retry_after_secs(retry_after)),
     );
+    // A rejected request has, by definition, no headroom left this instant.
+    headers.insert(X_RATELIMIT_REMAINING, HeaderValue::from(0u64));
     response
 }
 

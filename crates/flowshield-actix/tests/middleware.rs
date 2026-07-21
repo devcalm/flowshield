@@ -40,18 +40,29 @@ async fn rate_limits_by_peer_ip_with_429_and_retry_after() {
             .to_request()
     };
 
-    // Capacity 2 → two admits.
-    for _ in 0..2 {
-        let resp = test::call_service(&app, make()).await;
-        assert_eq!(resp.status(), StatusCode::OK);
-    }
-    // Third rejected with Retry-After.
+    // Capacity 2 → two admits, each reporting its remaining headroom (1 then 0).
+    let r1 = test::call_service(&app, make()).await;
+    assert_eq!(r1.status(), StatusCode::OK);
+    assert_eq!(remaining(&r1), Some(1), "first allow leaves 1 token");
+    let r2 = test::call_service(&app, make()).await;
+    assert_eq!(r2.status(), StatusCode::OK);
+    assert_eq!(remaining(&r2), Some(0), "second allow leaves 0 tokens");
+
+    // Third rejected with Retry-After and X-RateLimit-Remaining: 0.
     let resp = test::call_service(&app, make()).await;
     assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
     assert!(
         resp.headers().contains_key(header::RETRY_AFTER),
         "429 must carry Retry-After"
     );
+    assert_eq!(remaining(&resp), Some(0), "429 reports 0 remaining");
+}
+
+/// Read `X-RateLimit-Remaining` off a response, whatever its body type.
+fn remaining<B>(resp: &actix_web::dev::ServiceResponse<B>) -> Option<u64> {
+    resp.headers()
+        .get("x-ratelimit-remaining")
+        .map(|v| v.to_str().unwrap().parse().unwrap())
 }
 
 #[actix_web::test]

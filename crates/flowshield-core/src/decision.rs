@@ -42,6 +42,18 @@ impl Decision {
     pub fn is_allowed(&self) -> bool {
         matches!(self, Decision::Allowed(_))
     }
+
+    /// How many further requests are permitted **right now**, when the decision is
+    /// [`Allowed`] and the algorithm can cheaply report it. `None` for a rejection,
+    /// and `None` when the algorithm (or a degradation fallback) cannot say. This is
+    /// what HTTP integrations surface as `X-RateLimit-Remaining`.
+    pub fn remaining(&self) -> Option<u64> {
+        match self {
+            Decision::Allowed(a) => a.remaining,
+            Decision::Rejected(_) => None,
+        }
+    }
+
     pub fn retry_after(&self) -> Option<Duration> {
         if let Decision::Rejected(r) = self {
             Some(r.retry_after)

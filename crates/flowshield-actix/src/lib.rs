@@ -212,8 +212,16 @@ where
             let key = extractor.extract_key(&req);
             match limiter.check_dyn(&key).await {
                 Ok(decision) if decision.is_allowed() => {
-                    // Allowed: run the inner handler, unifying its body into the left arm.
-                    let res = service.call(req).await?;
+                    // Allowed: run the inner handler, unifying its body into the left arm,
+                    // and annotate it with the caller's remaining headroom when known.
+                    let remaining = decision.remaining();
+                    let mut res = service.call(req).await?;
+                    if let Some(remaining) = remaining {
+                        res.headers_mut().insert(
+                            header::HeaderName::from_static("x-ratelimit-remaining"),
+                            header::HeaderValue::from(remaining),
+                        );
+                    }
                     Ok(res.map_into_left_body())
                 }
                 Ok(decision) => {
@@ -240,6 +248,8 @@ fn too_many_requests(retry_after: Duration) -> HttpResponse {
             header::RETRY_AFTER,
             retry_after_secs(retry_after).to_string(),
         ))
+        // A rejected request has, by definition, no headroom left this instant.
+        .insert_header(("x-ratelimit-remaining", "0"))
         .finish()
 }
 
