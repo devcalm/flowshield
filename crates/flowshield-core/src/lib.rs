@@ -7,6 +7,10 @@ pub mod limiter;
 pub mod store;
 pub mod time;
 
+// Internal observability hooks (ADR-012). Always compiled; every emission inside
+// is feature-gated, so with `metrics`/`tracing` off the functions are no-ops.
+mod observe;
+
 // A minimal in-crate `StorageBackend` used only to test core itself — the limiter,
 // the conformance harness self-test, and the algorithms — since core cannot depend
 // on a backend crate (the inward dependency rule, ADR-002/003). It is compiled only

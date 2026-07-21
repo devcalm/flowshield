@@ -12,6 +12,15 @@ pub trait Algorithm: Send + Sync {
 
     /// PURE: no I/O, no clock reads. Given state + now + cost → new state + decision.
     fn step(&self, state: Self::State, now: Duration, cost: u64) -> (Self::State, Decision);
+
+    /// A short, static, low-cardinality name used as the `algorithm` label on
+    /// telemetry (ADR-012), e.g. `"token_bucket"`. This is a **provided** method so
+    /// adding it does not break existing out-of-crate implementations (ADR-013); it
+    /// defaults to `"unknown"` and concrete algorithms override it. It must never
+    /// encode per-key or otherwise high-cardinality data.
+    fn name(&self) -> &'static str {
+        "unknown"
+    }
 }
 
 /// Convert integer nanoseconds to a [`Duration`], saturating rather than

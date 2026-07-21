@@ -41,6 +41,10 @@ impl<S> Default for MemoryStore<S> {
 }
 
 impl<S: Copy + Send + 'static> StorageBackend<S> for MemoryStore<S> {
+    fn kind(&self) -> &'static str {
+        "memory"
+    }
+
     fn update(
         &self,
         key: &Key,

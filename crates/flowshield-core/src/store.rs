@@ -29,4 +29,13 @@ where
         ttl: Duration,
         step: impl FnOnce(Option<S>) -> (S, Decision) + Send,
     ) -> impl Future<Output = Result<Decision>> + Send;
+
+    /// A short, static, low-cardinality name used as the `backend` label on
+    /// telemetry (ADR-012), e.g. `"memory"` or `"redis"`. A **provided** method so
+    /// adding it breaks no existing out-of-crate backend (ADR-013); it defaults to
+    /// `"unknown"` and concrete backends override it. It must never encode per-key
+    /// or connection-specific (high-cardinality) data.
+    fn kind(&self) -> &'static str {
+        "unknown"
+    }
 }

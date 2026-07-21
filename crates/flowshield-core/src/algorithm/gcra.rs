@@ -127,6 +127,10 @@ impl Gcra {
 impl Algorithm for Gcra {
     type State = GcraState;
 
+    fn name(&self) -> &'static str {
+        "gcra"
+    }
+
     fn initial(&self, now: Duration) -> Self::State {
         // A fresh key is fully idle: its schedule sits at `now`, so the full
         // burst is immediately available.

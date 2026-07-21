@@ -104,6 +104,10 @@ impl TokenBucket {
 impl Algorithm for TokenBucket {
     type State = TokenBucketState;
 
+    fn name(&self) -> &'static str {
+        "token_bucket"
+    }
+
     fn initial(&self, now: Duration) -> Self::State {
         // A fresh key starts full, permitting an immediate burst to capacity.
         TokenBucketState {

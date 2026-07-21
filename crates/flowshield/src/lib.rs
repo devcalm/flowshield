@@ -41,10 +41,14 @@
 //! reports the binding limit and the maximum retry-after (FR-013).
 //!
 //! ```no_run
+//! # // The hidden wrapper is gated on `memory` so this example compiles cleanly under
+//! # // `--no-default-features` (where `MemoryStore` is not re-exported): it then reduces
+//! # // to an empty program. With the default `memory` feature on, the real code compiles.
+//! # #[cfg(feature = "memory")]
+//! # async fn demo() -> flowshield::Result<()> {
 //! use flowshield::{LimiterBuilder, LimiterSet, MemoryStore, Key};
 //! use flowshield::TokenBucket;
 //!
-//! # async fn demo() -> flowshield::Result<()> {
 //! // Two layers on the same client key: a burst-per-second and a daily quota.
 //! let per_second = LimiterBuilder::new(TokenBucket::per_second(10, 10)?, MemoryStore::new()).build()?;
 //! let per_day    = LimiterBuilder::new(TokenBucket::per_second(1000, 1000)?, MemoryStore::new()).build()?;

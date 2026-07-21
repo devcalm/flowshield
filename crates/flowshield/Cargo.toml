@@ -28,11 +28,17 @@ default = ["memory"]
 # In-memory storage backend — the default, zero-external-dependency store.
 memory = ["dep:flowshield-memory"]
 
+# Observability, OFF by default (ADR-010, ADR-012). Each is additive and forwards to
+# the core crate, where the instrumentation lives (ADR-002). With both off the
+# decision path pays negligible overhead (NFR-023).
+metrics = ["flowshield-core/metrics"]
+tracing = ["flowshield-core/tracing"]
+
 # NOTE (ADR-018 + ADR-010): the remaining user-facing flags
-# (redis / valkey / tower / axum / actix / metrics / tracing) are hosted HERE on the
-# facade and forward to their implementation crates as those crates land. They are
-# intentionally not declared yet: a feature that enables a not-yet-existent optional
-# dependency would fail to compile. See docs/design/Plan.md.
+# (redis / valkey / tower / axum / actix) are hosted HERE on the facade and forward to
+# their implementation crates as those crates land. They are intentionally not declared
+# yet: a feature that enables a not-yet-existent optional dependency would fail to
+# compile. See docs/design/Plan.md.
 
 [dependencies]
 # The facade re-exports the stable public API from the core crate. Both a version
@@ -48,6 +54,12 @@ flowshield-memory = { version = "0.1", path = "../flowshield-memory", optional =
 # of the published crate (ADR-016 keeps a runtime out of the library itself).
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
 
+# The observability example installs a real Prometheus recorder and a `tracing`
+# subscriber — the collection/export wiring a host owns (ADR-012). Dev-only.
+metrics-exporter-prometheus = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
 # Examples use the in-memory backend, so they only build when the `memory` feature is
 # on. `required-features` lets `cargo build --no-default-features` skip them cleanly.
 [[example]]
@@ -57,3 +69,8 @@ required-features = ["memory"]
 [[example]]
 name = "layered_quotas"
 required-features = ["memory"]
+
+# The observability example needs the two telemetry pillars turned on as well.
+[[example]]
+name = "observability"
+required-features = ["memory", "metrics", "tracing"]

@@ -26,3 +26,14 @@ categories = ["network-programming", "web-programming", "asynchronous"]
 tokio = "1"
 thiserror = "2"
 proptest = "1"
+
+# Observability (ADR-012). Optional and OFF by default in every crate that uses
+# them; declared here so versions stay aligned across the workspace.
+metrics = "0.24"
+tracing = "0.1"
+
+# Test/example-only observability tooling — never a runtime dependency of the
+# library crates (they appear under `[dev-dependencies]` only).
+metrics-util = "0.19"
+tracing-subscriber = "0.3"
+metrics-exporter-prometheus = "0.16"

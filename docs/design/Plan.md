@@ -111,17 +111,18 @@ Work is organized into sequential **phases**. Each phase lists an Objective, Mot
 - **Motivation:** Operators (P-04) require visibility before distributed rollout; degradation events (Phase 4) must be observable when they land.
 - **Scope:** `metrics` and `tracing` features on `flowshield-core`; Prometheus-compatible metrics; OpenTelemetry-compatible spans; redaction of sensitive keys.
 - **Tasks:**
-  1. ☐ Add allowed/rejected counters and decision-latency instrumentation. (FR-050)
-  2. ☐ Add tracing spans around decisions and (forward-looking) backend calls. (FR-052)
-  3. ☐ Add structured logging for significant events with key redaction by default. (FR-051, FR-073)
-  4. ☐ Verify zero/negligible overhead when features are disabled (micro-benchmark or compile-out check). (NFR-023)
-- **Deliverables:** Observability behind `metrics`/`tracing` features; a Prometheus + OTel example.
+  1. ✅ Add allowed/rejected counters and decision-latency instrumentation. (FR-050) — `flowshield_decisions_total{outcome,algorithm,backend}` counter + `flowshield_backend_duration_seconds` histogram, emitted once from the limiter's orchestration layer (`core::observe`).
+  2. ✅ Add tracing spans around decisions and (forward-looking) backend calls. (FR-052) — a `flowshield.check` span wraps each decision via `.instrument`, so the backend await and all events nest under it (OTel-correlatable).
+  3. ✅ Add structured logging for significant events with key redaction by default. (FR-051, FR-073) — degradation emits a `warn` event + `flowshield_degradations_total{policy,…}` counter; keys appear on spans only as a non-reversible FNV digest (`k#…`), never raw. A test asserts no raw key reaches output.
+  4. ✅ Verify zero/negligible overhead when features are disabled (micro-benchmark or compile-out check). (NFR-023) — all emission is behind `#[cfg(feature = …)]` and the latency `Timer` is a ZST no-op when `metrics` is off, so no clock is even read; the `--no-default-features` build proves the compile-out.
+- **Deliverables:** Observability behind `metrics`/`tracing` features; a Prometheus + OTel example. — ✅ `metrics`/`tracing` features on the facade forward to `flowshield-core`; `flowshield/examples/observability.rs` installs a Prometheus recorder + `tracing` subscriber. OTel export is host-side layering over the emitted `tracing` spans (ADR-012), documented in the example rather than pulling OTel deps into the library.
 - **Dependencies:** Phase 1 (Phase 2 recommended for meaningful signals).
 - **Risks:** R-12 (key leakage) → redaction is a default and a test asserts no raw key in output.
 - **Acceptance Criteria:** Counters and latency exposable to Prometheus (FR-050); spans exportable via OTel (FR-052); features off by default and near-zero cost when disabled (NFR-023); no sensitive key emitted by default (FR-073).
-- **Exit Criteria:** Observability example runs; overhead check documented; CI covers feature-on and feature-off builds.
+- **Exit Criteria:** Observability example runs; overhead check documented; CI covers feature-on and feature-off builds. — ✅ example runs; overhead posture documented in `core::observe`; CI exercises features-on (`--all-features`) and features-off (`--no-default-features`).
 - **Estimated Complexity:** M.
 - **Implements ADRs:** 010, 012.
+- **Status:** ✅ Complete.
 
 ---
 
