@@ -1,0 +1,21 @@
+%% FlowShield — GCRA admission step (theoretical-arrival-time schedule)
+%% Canonical source. Rendered copy embedded in docs/architecture/algorithms.md.
+%% Mirrors crates/flowshield-core/src/algorithm/gcra.rs::step (ADR-008, ADR-017).
+%% T = emission interval = 1/rate.  τ = burst tolerance = (burst − 1)·T.
+flowchart TD
+    A(["step(state, now, cost)"]) --> Z{"cost == 0?  (probe)"}
+    Z -->|yes| Z1["remaining = derive from max(tat, now)<br/>Decision = Allowed — schedule UNCHANGED"]
+    Z -->|no| B["earliest = tat + (cost − 1)·T − τ<br/>(first instant this request conforms)"]
+    B --> C{"now < earliest?"}
+    C -->|yes — too early| D["retry_after = earliest − now<br/>Decision = Rejected<br/>tat UNCHANGED"]
+    C -->|no — conforms| E["tat = max(tat, now) + cost·T<br/>(max clamp: idleness is not banked)<br/>Decision = Allowed { remaining }"]
+    Z1 --> K([new state + decision])
+    D --> K
+    E --> K
+
+    classDef admit fill:#132a17,stroke:#3fb950,color:#e6edf3;
+    classDef reject fill:#2a1416,stroke:#f85149,color:#e6edf3;
+    classDef probe fill:#1c2333,stroke:#58a6ff,color:#e6edf3;
+    class E admit;
+    class D reject;
+    class Z1 probe;

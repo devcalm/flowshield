@@ -1,0 +1,21 @@
+%% FlowShield — Token Bucket admission step (exact-integer accounting)
+%% Canonical source. Rendered copy embedded in docs/architecture/algorithms.md.
+%% Mirrors crates/flowshield-core/src/algorithm/token_bucket.rs::step (ADR-008, ADR-017).
+flowchart TD
+    A(["step(state, now, cost)"]) --> B["elapsed = max(0, now − last_update)<br/>(clamp: monotonic time never rewinds)"]
+    B --> C["accrued = carry_nanos + elapsed<br/>gained = accrued / interval<br/>remainder = accrued mod interval"]
+    C --> D{"tokens + gained ≥ capacity?"}
+    D -->|yes — refilled to full| E["tokens = capacity<br/>carry = 0  (spill the excess)"]
+    D -->|no| F["tokens += gained<br/>carry = remainder  (keep sub-token progress)"]
+    E --> G{"tokens ≥ cost?"}
+    F --> G
+    G -->|yes — admit| H["tokens −= cost<br/>Decision = Allowed { remaining = tokens }"]
+    G -->|no — reject| I["missing = cost − tokens<br/>retry_after = missing·interval − carry<br/>Decision = Rejected { retry_after }"]
+    H --> J["last_update = max(last_update, now)<br/>(advance the anchor monotonically)"]
+    I --> J
+    J --> K([new state + decision])
+
+    classDef admit fill:#132a17,stroke:#3fb950,color:#e6edf3;
+    classDef reject fill:#2a1416,stroke:#f85149,color:#e6edf3;
+    class H admit;
+    class I reject;
