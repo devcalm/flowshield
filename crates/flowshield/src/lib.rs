@@ -34,6 +34,35 @@
 //! [`flowshield-core`]: https://docs.rs/flowshield-core
 //! [architecture overview]: https://github.com/devcalm/flowshield/blob/main/docs/architecture/overview.md
 //!
+//! ## Composite / layered limits
+//!
+//! Enforce several limits at once by composing independent limiters; a request is
+//! admitted only when every one admits it, and on rejection the [`LimiterSet`]
+//! reports the binding limit and the maximum retry-after (FR-013).
+//!
+//! ```no_run
+//! use flowshield::{LimiterBuilder, LimiterSet, MemoryStore, Key};
+//! use flowshield::TokenBucket;
+//!
+//! # async fn demo() -> flowshield::Result<()> {
+//! // Two layers on the same client key: a burst-per-second and a daily quota.
+//! let per_second = LimiterBuilder::new(TokenBucket::per_second(10, 10)?, MemoryStore::new()).build()?;
+//! let per_day    = LimiterBuilder::new(TokenBucket::per_second(1000, 1000)?, MemoryStore::new()).build()?;
+//!
+//! let limits = LimiterSet::new()
+//!     .with("per-second", per_second)
+//!     .with("per-day", per_day);
+//!
+//! let outcome = limits.check(&Key::from("client-42")).await?;
+//! if !outcome.is_allowed() {
+//!     let limit = outcome.binding().unwrap();       // which layer bound
+//!     let retry = outcome.retry_after().unwrap();    // the longer of the waits
+//!     eprintln!("rejected by {limit}, retry after {retry:?}");
+//! }
+//! # Ok(())
+//! # }
+//! ```
+//!
 //! ## Status
 //!
 //! FlowShield is in early development (Phase 1). The core API is taking shape; the
@@ -44,11 +73,18 @@
 #[doc(inline)]
 pub use flowshield_core::{
     algorithm::{Algorithm, token_bucket::TokenBucket},
+    composite::{Combined, DynLimiter, LimiterSet, combine},
     decision::{Allowed, Decision, Rejected},
     error::{Error, Result},
     key::{Key, KeyExtractor},
     limiter::{DegradationPolicy, Limiter, LimiterBuilder},
-    memory::MemoryStore,
     store::StorageBackend,
     time::{MonotonicClock, TimeSource},
 };
+
+/// The default in-memory storage backend (bounded, expiring, sharded), enabled by
+/// the default `memory` feature (ADR-010). Depend on `flowshield-memory` directly for
+/// its builder and tuning knobs.
+#[cfg(feature = "memory")]
+#[doc(inline)]
+pub use flowshield_memory::MemoryStore;

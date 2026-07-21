@@ -88,12 +88,12 @@ Work is organized into sequential **phases**. Each phase lists an Objective, Mot
 - **Motivation:** Proves the core abstractions against real algorithm and backend implementations before distributed complexity; delivers immediate single-node value (UC-01, UC-05).
 - **Scope:** `flowshield-memory`; Token Bucket and GCRA algorithms; bounded per-key state with expiry/eviction; the optional composition helper.
 - **Tasks:**
-  1. ☐ Implement the in-memory backend with bounded, expiring per-key state. (FR-020, FR-071)
-  2. ☐ Implement Token Bucket (default). (ADR-008, FR-012)
-  3. ☐ Implement GCRA. (ADR-008, FR-012)
-  4. ☐ Run both algorithms + memory backend through the conformance suite. (FR-025)
-  5. ☐ Implement the thin composition helper (evaluate-all, binding-limit, max retry-after). (ADR-004, FR-013)
-  6. ☐ Property tests for admission invariants; stress test for high-cardinality/adversarial keys. (NFR-010, NFR-034)
+  1. ✅ Implement the in-memory backend with bounded, expiring per-key state — `flowshield-memory` (sharded LRU + lazy TTL expiry). (FR-020, FR-071)
+  2. ✅ Implement Token Bucket (default). (ADR-008, FR-012)
+  3. ✅ Implement GCRA. (ADR-008, FR-012)
+  4. ◑ Run both algorithms + memory backend through the conformance suite. (FR-025) — memory backend passes the `StorageBackend` contract harness; algorithm behaviour is covered by the property suite. (Remaining: exercise Token Bucket **and** GCRA end-to-end through the memory store.)
+  5. ✅ Implement the thin composition helper (evaluate-all, binding-limit, max retry-after) — `core::composite`: pure `combine` + type-erased `LimiterSet`. (ADR-004, FR-013)
+  6. ◑ Property tests for admission invariants; stress test for high-cardinality/adversarial keys. (NFR-010, NFR-034) — adversarial high-cardinality + concurrency stress done in `flowshield-memory`; algorithm property suite exists in core. (Remaining: admission-invariant property tests through the store.)
   7. ☐ Example: rate-limit a background/non-HTTP workload. (FR-004, UC-05)
 - **Deliverables:** `flowshield-memory`; two algorithms; composition helper; property + stress tests; a runnable non-HTTP example.
 - **Dependencies:** Phase 1.

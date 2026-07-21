@@ -1,28 +1,26 @@
-//! End-to-end concurrency tests for the atomic check-and-consume contract
-//! (ADR-005): "no two calls for the same key ever interleave."
+//! Atomicity of the check-and-consume contract (ADR-005, NFR-004) through the full
+//! async [`Limiter`] → [`MemoryStore`] path, under many OS threads contending on the
+//! store. This is where a lost-update race in a shard's atomic section would surface
+//! as over-admission.
 //!
-//! The property-based `conformance` suite drives the *pure* algorithm directly
-//! and so never touches the store's atomicity. These tests instead go through the
-//! full async [`Limiter`] → [`MemoryStore`] path with many OS threads contending
-//! on the same key, which is exactly where a lost-update race in the store would
-//! show up as over-admission.
+//! The property-based conformance suite drives the *pure* algorithm directly and so
+//! never touches the store's locking; these tests do the opposite, exercising the
+//! **production** sharded store under genuine parallelism.
 //!
-//! No async runtime is involved (ADR-016): the memory store's futures are ready
-//! on first poll, so a no-op-waker `block_on` completes each `check` on the
-//! calling thread, and real parallelism comes from [`std::thread::scope`]. The
-//! contention is genuine — every `check` locks the store's mutex during that
-//! poll.
+//! No async runtime is involved (ADR-016): the store's futures are ready on first
+//! poll, so a no-op-waker `block_on` completes each `check` on the calling thread,
+//! and real parallelism comes from [`std::thread::scope`]. The contention is genuine
+//! — every `check` locks a shard `Mutex` during that poll.
 
 use flowshield_core::algorithm::token_bucket::TokenBucket;
 use flowshield_core::key::Key;
 use flowshield_core::limiter::LimiterBuilder;
-use flowshield_core::memory::MemoryStore;
 use flowshield_core::time::TestClock;
+use flowshield_memory::MemoryStore;
 use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 
-/// Drive an immediately-ready future to completion without a runtime — the same
-/// technique the crate's in-module tests use.
 fn block_on<F: Future>(fut: F) -> F::Output {
     use std::task::{Context, Poll};
     let mut cx = Context::from_waker(std::task::Waker::noop());
@@ -37,10 +35,9 @@ fn block_on<F: Future>(fut: F) -> F::Output {
 const THREADS: usize = 16;
 
 /// With time frozen so no token ever refills, a burst of concurrent requests far
-/// exceeding the bucket must admit *exactly* `capacity` — never more (which would
-/// be a lost-update race in the atomic section) and never fewer (which would be a
-/// spurious rejection). Repeated over many rounds to shake out timing-dependent
-/// races.
+/// exceeding the bucket must admit *exactly* `capacity` — never more (a lost-update
+/// race in the atomic section) and never fewer (a spurious rejection). Repeated over
+/// many rounds to shake out timing-dependent races.
 #[test]
 fn concurrent_requests_on_one_key_admit_exactly_capacity() {
     const CAPACITY: u64 = 100;
@@ -80,8 +77,9 @@ fn concurrent_requests_on_one_key_admit_exactly_capacity() {
 }
 
 /// Distinct keys must not interfere: each key, hammered concurrently on its own
-/// thread, independently admits exactly its own `capacity`. This exercises
-/// concurrent access to different entries of the shared store map.
+/// thread, independently admits exactly its own `capacity`. With the sharded store
+/// this also exercises concurrent access to keys that may share, or fall in
+/// different, shards.
 #[test]
 fn concurrent_requests_across_keys_are_independent() {
     const CAPACITY: u64 = 20;
@@ -121,11 +119,11 @@ fn concurrent_requests_across_keys_are_independent() {
     }
 }
 
-/// Under contention *with* refill: while threads hammer a drained bucket, the
-/// clock is advanced by exactly `capacity` intervals, so precisely `capacity`
-/// more tokens become available over the run. Total admits must land within the
-/// atomic bound `initial_capacity + refilled` — never above it (a race), and the
-/// refilled tokens must actually be handed out (liveness).
+/// Under contention *with* refill: while threads hammer a drained bucket, the clock
+/// is advanced by exactly `capacity` intervals, so precisely `capacity` more tokens
+/// become available over the run. Total admits must land within the atomic bound
+/// `initial_capacity + refilled` — never above it (a race), and the refilled tokens
+/// must actually be handed out (liveness).
 #[test]
 fn concurrent_refill_stays_within_bound() {
     const CAPACITY: u64 = 50;
@@ -162,16 +160,16 @@ fn concurrent_refill_stays_within_bound() {
         let clock = clock.clone();
         scope.spawn(move || {
             for _ in 0..REFILLS {
-                clock.advance(std::time::Duration::from_secs(1));
+                clock.advance(Duration::from_secs(1));
                 std::thread::yield_now();
             }
         });
     });
 
     // Upper bound: the initial burst plus every token the elapsed time could mint.
-    // Equality isn't asserted because how many refilled tokens are actually
-    // claimed depends on the race between advancing time and draining — but the
-    // atomic section must never let admits exceed what time permits.
+    // Equality isn't asserted because how many refilled tokens are actually claimed
+    // depends on the race between advancing time and draining — but the atomic
+    // section must never let admits exceed what time permits.
     let got = allowed.load(Ordering::Relaxed);
     let bound = CAPACITY + REFILLS;
     assert!(

@@ -1,0 +1,30 @@
+[package]
+name = "flowshield-memory"
+version = "0.1.1"
+description = "In-memory storage backend for FlowShield — bounded, expiring, sharded per-key rate-limit state."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+
+# Packaging allowlist for `cargo publish` (see ADR-003). `include` is an allowlist —
+# preferred over `exclude` — so files added later are excluded by default and nothing
+# ships by accident. Repository docs live at the workspace root, outside this package.
+include = [
+    "src/**/*.rs",
+    "README.md",
+]
+
+[dependencies]
+# Implements the core `StorageBackend` trait; no other runtime dependencies (this is
+# the "zero external deps" default backend of ADR-010).
+flowshield-core = { version = "0.1", path = "../flowshield-core" }
+
+[dev-dependencies]
+# Re-enter core with the `conformance` feature so the shared ADR-005 contract harness
+# is available to the backend's own tests (features unify additively in test builds).
+flowshield-core = { version = "0.1", path = "../flowshield-core", features = ["conformance"] }

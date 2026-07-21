@@ -4,6 +4,7 @@ resolver = "2"
 members = [
     "crates/flowshield",
     "crates/flowshield-core",
+    "crates/flowshield-memory",
 ]
 
 [workspace.package]

@@ -4,9 +4,9 @@
 //! limiter behaves identically no matter where per-key state lives. Rather than
 //! re-testing that contract in each backend crate, the contract is expressed
 //! *once*, here, as a reusable harness any backend can run against its own store.
-//! The in-crate [`MemoryStore`](crate::memory::MemoryStore) is its first client;
-//! the distributed backends (ADR-006) become later clients with no new test
-//! logic — which is how their behavioural parity is demonstrated.
+//! The `flowshield-memory` backend is its first client; the distributed backends
+//! (ADR-006) become later clients with no new test logic — which is how their
+//! behavioural parity is demonstrated.
 //!
 //! # What it checks
 //!

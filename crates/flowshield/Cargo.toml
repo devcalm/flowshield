@@ -20,14 +20,25 @@ include = [
     "README.md",
 ]
 
+[features]
+# Lean default: in-memory storage only (ADR-010). Distributed backends and framework
+# integrations are additive opt-ins, declared here as their implementation crates land.
+default = ["memory"]
+
+# In-memory storage backend — the default, zero-external-dependency store.
+memory = ["dep:flowshield-memory"]
+
+# NOTE (ADR-018 + ADR-010): the remaining user-facing flags
+# (redis / valkey / tower / axum / actix / metrics / tracing) are hosted HERE on the
+# facade and forward to their implementation crates as those crates land. They are
+# intentionally not declared yet: a feature that enables a not-yet-existent optional
+# dependency would fail to compile. See docs/design/Plan.md.
+
 [dependencies]
 # The facade re-exports the stable public API from the core crate. Both a version
 # (used when published to crates.io) and a path (used inside this workspace) are
 # specified so local builds and published builds resolve correctly.
 flowshield-core = { version = "0.1", path = "../flowshield-core" }
 
-# NOTE (ADR-018 + ADR-010): the user-facing feature taxonomy
-# (memory / redis / valkey / tower / axum / actix / metrics / tracing) will be hosted
-# HERE on the facade and forward to the implementation crates as those crates land.
-# They are intentionally not declared yet: a feature that enables a not-yet-existent
-# optional dependency would fail to compile. See docs/design/Plan.md.
+# The default in-memory backend, forwarded through the `memory` feature above.
+flowshield-memory = { version = "0.1", path = "../flowshield-memory", optional = true }

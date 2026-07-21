@@ -12,11 +12,15 @@ struct Slot<S> {
     expires_at: Duration,
 }
 
-/// In-process, exact-semantics [`StorageBackend`] (ADR-005).
+/// A minimal in-crate [`StorageBackend`] (ADR-005), compiled **only for core's own
+/// tests** — it is not public API.
 ///
-/// This is the Phase-1 in-crate backend and conformance test double; it graduates into
-/// the dedicated `flowshield-memory` crate in Phase 2. A single mutex is the simplest
-/// correct design; shard it (e.g. by key hash) when contention matters (NFR-004).
+/// Core cannot depend on a backend crate (the inward dependency rule, ADR-002/003),
+/// yet its unit tests, the conformance-harness self-test, and the algorithm tests
+/// all need a concrete `StorageBackend` to run against. This single-mutex, unbounded
+/// map is the simplest thing that satisfies the contract, and exists purely to serve
+/// that role. The production in-memory backend — bounded, sharded, LRU-evicting — is
+/// the separate `flowshield-memory` crate; reach for it in real use.
 pub struct MemoryStore<S> {
     slots: Mutex<HashMap<Key, Slot<S>>>,
 }

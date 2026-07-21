@@ -20,6 +20,25 @@ pub struct Rejected {
 }
 
 impl Decision {
+    /// Construct an "allowed" decision, optionally reporting how many further
+    /// requests are permitted right now (`None` when the algorithm cannot cheaply
+    /// say). This is the constructor out-of-crate [`Algorithm`] implementors use to
+    /// produce a decision, since [`Allowed`] is `#[non_exhaustive]` and cannot be
+    /// built with a struct literal from another crate (NFR-020, ADR-013).
+    ///
+    /// [`Algorithm`]: crate::algorithm::Algorithm
+    pub fn allowed(remaining: Option<u64>) -> Self {
+        Decision::Allowed(Allowed { remaining })
+    }
+
+    /// Construct a "rejected" decision carrying the **relative** wait until the
+    /// request could succeed (never an absolute timestamp — ADR-017 #4). The
+    /// constructor counterpart to [`allowed`](Self::allowed) for out-of-crate
+    /// extension authors.
+    pub fn rejected(retry_after: Duration) -> Self {
+        Decision::Rejected(Rejected { retry_after })
+    }
+
     pub fn is_allowed(&self) -> bool {
         matches!(self, Decision::Allowed(_))
     }
