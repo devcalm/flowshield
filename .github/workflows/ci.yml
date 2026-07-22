@@ -78,6 +78,25 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo doc --workspace --no-deps --all-features --locked
 
+  # Benchmark suite (ADR-014, Phase 6). Shared CI runners are too noisy to gate a
+  # numeric performance tolerance without false alarms, so this job does the two checks
+  # that ARE reliable on shared hardware: it compiles the whole suite (benchmarks never
+  # bit-rot) and runs the scenario binaries (a deadlock, panic, or blown allocation
+  # budget fails the build — NFR-004). Numeric regression gating (scripts/bench_regression.py)
+  # is intended for a dedicated runner; see docs/benchmarks/methodology.md.
+  bench:
+    name: benchmarks (build + scenarios)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # Compile every benchmark without running the measurement loops.
+      - run: cargo bench -p flowshield-benchmarks --benches --no-run --locked
+      # Run the deterministic scenario binaries; a panic/deadlock here fails CI.
+      - run: cargo run -p flowshield-benchmarks --release --example allocations --locked
+      - run: cargo run -p flowshield-benchmarks --release --example concurrency_10k --locked
+
   # Distributed-backend integration tests against real Redis and Valkey (ADR-006).
   # Service containers run only on Linux runners; the main test matrix (which also
   # compiles these crates) simply skips the reachability-gated tests when no server

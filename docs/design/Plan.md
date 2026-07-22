@@ -180,18 +180,19 @@ Work is organized into sequential **phases**. Each phase lists an Objective, Mot
 - **Motivation:** Targets must follow measurement, not precede it (ADR-014); performance is an adoption gate for P-05.
 - **Scope:** Benchmark suite (throughput, latency incl. tail, allocations, contention, 10k concurrent, Redis RTT, multi-node); CI regression gating; characterization of DV-01/DV-03.
 - **Tasks:**
-  1. ☐ Implement the benchmark scenarios with documented, reproducible methodology and machine-readable output. (ADR-014, FR-060)
-  2. ☐ Run the 10k-concurrent and contention scenarios. (NFR-004)
-  3. ☐ Characterize the Redis/Valkey over-admission bound via multi-node runs → resolve DV-01. (NFR-002)
-  4. ☐ Establish official latency/allocation/throughput targets → resolve DV-03; set SM-01/SM-02 baselines.
-  5. ☐ Add CI performance-regression gating against tolerance. (NFR-033, NFR-035)
-- **Deliverables:** Benchmark suite; published baseline results; official targets; CI regression gate.
+  1. ✅ Implement the benchmark scenarios with documented, reproducible methodology and machine-readable output. (ADR-014, FR-060) — `flowshield-benchmarks` (non-published): Criterion benches for pure-algorithm, end-to-end decision (throughput + tail, cardinality sweep), contention, and end-to-end HTTP-middleware overhead (the `flowshield-tower` layer driven in-process — the Phase-5 dependency for HTTP benchmarks); JSON-emitting scenario examples for allocations-per-decision and 10k-concurrent; reachability-gated Redis RTT bench. Methodology + a dated results snapshot in `docs/benchmarks/`.
+  2. ✅ Run the 10k-concurrent and contention scenarios. (NFR-004) — `examples/concurrency_10k.rs` runs 1M decisions across 10k Tokio tasks (no deadlock/panic); `benches/contention.rs` sweeps threads × {hot-key, spread}.
+  3. ☐ Characterize the Redis/Valkey over-admission bound via multi-node runs → resolve DV-01. (NFR-002) — the `redis_rtt` harness is in place; the multi-node coordination run needs dedicated infra and remains open.
+  4. ☐ Establish official latency/allocation/throughput targets → resolve DV-03; set SM-01/SM-02 baselines. — deferred until a dedicated, quiesced benchmark host makes the medians stable enough to commit; a first Apple-M1 snapshot is published as a data point, not a target.
+  5. ✅ Add CI performance-regression gating against tolerance. (NFR-033, NFR-035) — `scripts/bench_regression.py` (median-based, ±15% default tolerance) is the numeric gate for a dedicated runner; the per-PR `bench` CI job compiles the whole suite (no bit-rot) and runs the scenario binaries (panic/deadlock/blown-allocation ⇒ CI failure).
+- **Deliverables:** Benchmark suite; published baseline results; official targets; CI regression gate. — ✅ suite + first results snapshot + regression gate delivered; **official targets (DV-03) deferred** pending dedicated hardware.
 - **Dependencies:** Phases 2 and 4 (and 5 for end-to-end HTTP benchmarks).
 - **Risks:** R-08 (non-reproducibility) → documented methodology + machine-readable output as acceptance gate.
 - **Acceptance Criteria:** All benchmark scenarios exist and run reproducibly (FR-060); 10k-concurrent completes without deadlock/panic (NFR-004); DV-01 and DV-03 resolved and documented.
 - **Exit Criteria:** Baselines published; targets ratified; regression gate active in CI.
 - **Estimated Complexity:** M.
 - **Implements ADRs:** 014, 006.
+- **Status:** 🟡 In progress — suite, scenarios, machine-readable output, first results snapshot, and CI/regression tooling complete. Remaining: multi-node over-admission characterization (DV-01) and ratifying official targets (DV-03), both gated on a dedicated benchmark host.
 
 ---
 

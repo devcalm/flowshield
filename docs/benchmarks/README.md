@@ -6,9 +6,16 @@ This directory documents *how* we measure and *what* we measured. The benchmark 
 
 See [ADR-014 — Benchmarking](../adr/ADR-014-benchmarking.md) for the governing decision: **no numeric performance targets are set until the suite produces data.**
 
-Planned contents:
-- Methodology: environment, warm-up, sample sizes, statistical treatment, how to reproduce.
-- Scenarios: throughput, latency (incl. tail), allocations, contention, 10k concurrent, Redis RTT, multi-node.
-- Results: dated, machine-readable + narrative summaries; regression history.
+Contents:
+- **[`methodology.md`](./methodology.md)** — environment, tools, scenarios, workload
+  parameters, statistical treatment, how to reproduce, and the regression-gating workflow.
+- **Results snapshots** — dated, machine-scoped narrative summaries (e.g.
+  [`results-2026-07-22-apple-m1.md`](./results-2026-07-22-apple-m1.md)); Criterion's
+  machine-readable `estimates.json` lives under `target/criterion/` per run.
 
-**Status:** to be populated during Phase 6.
+The benchmark **code** is in the non-published [`flowshield-benchmarks`](../../crates/flowshield-benchmarks)
+crate. The regression gate is [`scripts/bench_regression.py`](../../scripts/bench_regression.py).
+
+**Status:** Phase 6 suite implemented (throughput, latency/tail, allocations, contention,
+10k-concurrent, Redis RTT). Official numeric targets (DV-03) and the multi-node
+over-admission bound (DV-01) await a dedicated benchmark host.

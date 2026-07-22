@@ -9,6 +9,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 ### Added
+- **Phase 6 — Benchmarking suite** (ADR-014). New non-published `flowshield-benchmarks`
+  crate measuring the public facade, with reproducible methodology and machine-readable
+  output:
+  - **Criterion microbenchmarks** — `algorithm` (pure `Algorithm::step` floor), `decision`
+    (end-to-end `Limiter::check` throughput + full latency distribution, swept over
+    `{1, 1k, 100k}` keys, both algorithms, accept and reject branches), and `contention`
+    (shared store under a thread sweep, hot-key vs. spread regimes). Criterion emits the
+    tail (p50…p99.9) ADR-014 requires and per-benchmark `estimates.json`.
+  - **End-to-end HTTP-middleware benchmark** — `http_middleware` drives the
+    `flowshield-tower` `Layer`/`Service` **in-process** (no TCP, no server) over the
+    in-memory backend, measuring the layer's own per-request cost vs. a bare downstream
+    service (`flowshield-axum` builds on this same layer). First finding: the admit path
+    adds ~455 ns and, unlike the raw decision, is **not** allocation-free — the peer-IP →
+    `String` key extraction and the boxed service future dominate.
+  - **Scenario examples emitting JSON** — `allocations` (counting global allocator →
+    allocations-per-decision) and `concurrency_10k` (10k Tokio tasks × 100 decisions,
+    NFR-004 no-deadlock/no-panic gate). First results: the in-memory hot path is
+    **allocation-free in steady state**, and 10k-concurrent completes cleanly with a ~5×
+    sharding payoff (per-task key vs. shared hot key).
+  - **Reachability-gated `redis_rtt`** benchmark (behind the `redis` feature) for
+    network round-trip overhead.
+  - **Regression gate** — `scripts/bench_regression.py` (stdlib-only) flattens Criterion
+    output and fails a candidate whose median regresses beyond tolerance (±15% default). A
+    new per-PR `bench` CI job compiles the whole suite and runs the scenario binaries.
+  - Methodology and a dated Apple-M1 results snapshot under `docs/benchmarks/`. Official
+    numeric targets (DV-03) and the multi-node over-admission bound (DV-01) remain open,
+    pending a dedicated benchmark host.
+
+### Added
 - **`X-RateLimit-Remaining` response header** across all three HTTP integrations
   (Tower/Axum/Actix). Allowed responses now carry the caller's remaining headroom when the
   algorithm reports it (Token Bucket / GCRA always do); a `429` reports `0`. Backed by a new

@@ -4,7 +4,7 @@
 use flowshield_core::algorithm::token_bucket::TokenBucket;
 use flowshield_core::limiter::LimiterBuilder;
 use flowshield_memory::MemoryStore;
-use flowshield_tower::{ForwardedForKeyExtractor, FlowShieldLayer, HeaderKeyExtractor};
+use flowshield_tower::{FlowShieldLayer, ForwardedForKeyExtractor, HeaderKeyExtractor};
 use http::{HeaderName, Request, Response, StatusCode, header};
 use std::convert::Infallible;
 use std::net::SocketAddr;
@@ -89,7 +89,8 @@ async fn forwarded_for_keys_on_the_left_most_xff_ip_not_the_rfc7239_header() {
     let with_headers = |xff: Option<&str>, forwarded: Option<&str>| {
         let mut req = Request::new(());
         if let Some(v) = xff {
-            req.headers_mut().insert("x-forwarded-for", v.parse().unwrap());
+            req.headers_mut()
+                .insert("x-forwarded-for", v.parse().unwrap());
         }
         if let Some(v) = forwarded {
             req.headers_mut().insert("forwarded", v.parse().unwrap());

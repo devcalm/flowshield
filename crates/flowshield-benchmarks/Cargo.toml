@@ -1,0 +1,78 @@
+[package]
+name = "flowshield-benchmarks"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Reproducible benchmark suite for FlowShield (ADR-014). Not published."
+
+# This crate exists only to measure the workspace; it is never released to crates.io.
+publish = false
+
+[lints.rust]
+# The benchmark binaries deliberately do throwaway work; keep the signal high.
+missing_docs = "allow"
+
+[dependencies]
+# Measured surface: the facade re-exports the whole public API, so benchmarks depend on
+# exactly what users depend on. Distributed backends are opt-in via features below so the
+# in-memory suite builds with no network deps (ADR-010).
+flowshield = { path = "../flowshield", default-features = false, features = ["memory", "tower"] }
+flowshield-redis = { path = "../flowshield-redis", optional = true }
+flowshield-valkey = { path = "../flowshield-valkey", optional = true }
+
+[dev-dependencies]
+# `async_tokio` powers the Redis round-trip benchmark's `to_async` driver (its future
+# genuinely pends on the network). Features are additive over the workspace declaration.
+criterion = { workspace = true, features = ["async_tokio"] }
+# A real multi-threaded runtime for the concurrency/contention scenarios (ADR-016). The
+# in-memory hot-path microbenchmarks avoid a runtime entirely (their futures are ready).
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "sync"] }
+# The end-to-end HTTP-middleware benchmark drives the Tower `Service`/`Layer` in-process
+# (no TCP, no server). Versions match `flowshield-tower` so the same types are shared.
+http = "1"
+tower-service = "0.3"
+tower-layer = "0.3"
+
+[features]
+default = []
+# Reachability-gated distributed benchmarks (Redis RTT / multi-node). Off by default so
+# the core suite needs no server; enable with `--features redis,valkey` when a server is up.
+redis = ["dep:flowshield-redis"]
+valkey = ["dep:flowshield-valkey"]
+
+# --- In-memory hot-path microbenchmarks (no network, no runtime) --------------------
+[[bench]]
+name = "decision"
+harness = false
+
+[[bench]]
+name = "algorithm"
+harness = false
+
+[[bench]]
+name = "contention"
+harness = false
+
+# End-to-end HTTP middleware overhead: the Tower layer driven in-process against the
+# in-memory backend (no server needed). Needs the facade `tower` feature (enabled above).
+[[bench]]
+name = "http_middleware"
+harness = false
+
+# --- Distributed round-trip benchmark (reachability-gated) --------------------------
+[[bench]]
+name = "redis_rtt"
+harness = false
+required-features = ["redis"]
+
+# --- Standalone scenarios that emit machine-readable JSON on stdout ------------------
+# Examples, not bins, so they can use the dev-dependencies (Tokio) the way a service
+# would. Run with `cargo run -p flowshield-benchmarks --release --example <name>`.
+[[example]]
+name = "concurrency_10k"
+
+[[example]]
+name = "allocations"
