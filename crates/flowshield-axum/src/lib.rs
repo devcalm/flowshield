@@ -4,7 +4,7 @@
 //! `flowshield-axum` adds Axum-idiomatic ergonomics on top of the
 //! [`flowshield-tower`](flowshield_tower) middleware (ADR-009): the same `Layer` works
 //! directly in an Axum app, plus a [`ConnectInfoKeyExtractor`] that reads the client
-//! address from Axum's [`ConnectInfo`](axum::extract::ConnectInfo).
+//! address from Axum's [`ConnectInfo`].
 //!
 //! ```no_run
 //! use axum::{routing::get, Router};
@@ -29,7 +29,7 @@
 //! ```
 //!
 //! For custom keying (API key, tenant, header), use [`flowshield_tower::FlowShieldLayer`]
-//! directly with any [`KeyExtractor`](flowshield_core::key::KeyExtractor) — the ones
+//! directly with any [`KeyExtractor`] — the ones
 //! from `flowshield-tower` are re-exported here for convenience.
 
 use axum::extract::ConnectInfo;
@@ -50,7 +50,7 @@ pub use flowshield_tower::{
 /// [`into_make_service_with_connect_info`](axum::Router::into_make_service_with_connect_info).
 ///
 /// This is the Axum counterpart to
-/// [`PeerAddrKeyExtractor`](flowshield_tower::PeerAddrKeyExtractor) (which reads a bare
+/// [`PeerAddrKeyExtractor`] (which reads a bare
 /// `SocketAddr` extension). Like it, it is spoof-resistant — the address comes from the
 /// accepted connection, not a client-controlled header. Requests without connect-info
 /// fall into one shared `"unknown-peer"` bucket.
@@ -67,7 +67,7 @@ impl<B> KeyExtractor<Request<B>> for ConnectInfoKeyExtractor {
 }
 
 /// Build a [`FlowShieldLayer`] that rate-limits by client IP using Axum's
-/// [`ConnectInfo`](axum::extract::ConnectInfo) (see [`ConnectInfoKeyExtractor`]).
+/// [`ConnectInfo`] (see [`ConnectInfoKeyExtractor`]).
 ///
 /// Serve the router with `into_make_service_with_connect_info::<SocketAddr>()` so the
 /// client address is available.

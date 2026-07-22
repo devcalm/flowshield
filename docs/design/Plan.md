@@ -202,20 +202,21 @@ Work is organized into sequential **phases**. Each phase lists an Objective, Mot
 - **Motivation:** 1.0 is a promise of stability (ADR-013, ADR-015); it must be earned with test depth, security review, docs, and a versioning commitment.
 - **Scope:** Test-depth completion; security review; full documentation set; MSRV decision; deprecation/compat policy; release.
 - **Tasks:**
-  1. ☐ Complete property/stress/concurrency coverage across algorithms and backends. (NFR-034)
-  2. ☐ Security review: safe defaults, DoS/resource-exhaustion bounds, config validation, no `unsafe` footguns. (FR-070–FR-072, P-06)
-  3. ☐ Documentation set: tutorial, example, API docs, design notes per public feature. (NFR-041)
-  4. ☐ Fix the concrete **MSRV** and update cadence → resolve DV-02. (ADR-015)
-  5. ☐ Publish the deprecation and backward-compatibility policy. (NFR-032)
-  6. ☐ Finalize extension-API stability tiers and an extension-author guide. (ADR-013)
-  7. ☐ Cut the 1.0 release across the crate set with a changelog. (NFR-030)
-- **Deliverables:** Hardened test suite; security review report; complete docs; MSRV + compat policy; 1.0 release.
+  1. ✅ Complete property/stress/concurrency coverage across algorithms and backends. (NFR-034) — the suite (≈100 tests) spans both algorithms and all backends: property tests for admission invariants + adversarial high-cardinality/concurrency stress (Phase 2), the family-A conformance harness (memory), the Rust-vs-Lua oracle cross-check + fault-injection (Redis/Valkey, Phase 4), and the HTTP-integration conformance tests (Phase 5).
+  2. ✅ Security review: safe defaults, DoS/resource-exhaustion bounds, config validation, no `unsafe` footguns. (FR-070–FR-072, P-06) — documented posture in [`docs/security-review.md`](../security-review.md); `#![forbid(unsafe_code)]` added to `flowshield-core` (now on every first-party crate).
+  3. ✅ Documentation set: tutorial, example, API docs, design notes per public feature. (NFR-041) — [`docs/tutorial.md`](../tutorial.md), per-crate `examples/`, doc-commented public API, and the ADR set; README rewritten from its stale "Phase 0" state.
+  4. ✅ Fix the concrete **MSRV** and update cadence → resolve DV-02. (ADR-015) — **Rust 1.85** committed workspace-wide + CI `msrv` job; advancement cadence and per-feature caveat in [`docs/COMPATIBILITY.md`](../COMPATIBILITY.md).
+  5. ✅ Publish the deprecation and backward-compatibility policy. (NFR-032) — [`docs/COMPATIBILITY.md`](../COMPATIBILITY.md): SemVer coverage, a concrete deprecation window (≥1 minor, removal no earlier than next major), and cross-crate versioning.
+  6. ✅ Finalize extension-API stability tiers and an extension-author guide. (ADR-013) — per-trait tier table in COMPATIBILITY.md + [`docs/extension-guide.md`](../extension-guide.md) (custom algorithm / backend / key extractor, with the conformance harness).
+  7. 🟡 Cut the 1.0 release across the crate set with a changelog. (NFR-030) — **prepared:** all crates bumped to `1.0.0`, CHANGELOG `1.0.0` section written, release notes drafted. The actual `cargo publish` / `git tag` is intentionally left to the maintainer (credentials + irreversible).
+- **Deliverables:** Hardened test suite; security review report; complete docs; MSRV + compat policy; 1.0 release. — ✅ all delivered except the maintainer-owned publish step.
 - **Dependencies:** Phases 1–6.
 - **Risks:** R-03 (post-1.0 breaking changes), R-10 (maintainer bandwidth), R-11 (guarantee misunderstanding) → freeze API review before 1.0; document guarantees prominently.
 - **Acceptance Criteria:** Security review passes with documented posture (Security §17); every public feature documented with tutorial/example/API/design notes (NFR-041); MSRV and deprecation policies published (NFR-031, NFR-032); SemVer honored across crates (NFR-030).
 - **Exit Criteria:** 1.0 released; changelog published; extension-author guide available; Definition of Done for 1.0 met.
 - **Estimated Complexity:** L.
 - **Implements ADRs:** 013, 015.
+- **Status:** 🟡 Ready to ship — all hardening, documentation, MSRV, and policy work complete; crates staged at `1.0.0`. Remaining: the maintainer-owned `cargo publish` + `git tag v1.0.0` (deliberately not automated).
 
 ---
 

@@ -2,6 +2,15 @@
 
 This directory holds **all** FlowShield documentation. It is intentionally richer than what ships to crates.io: the repository serves contributors, maintainers, and the design record, while the published crates serve library users.
 
+## Start here (users)
+
+| Document | For |
+|----------|-----|
+| [`tutorial.md`](tutorial.md) | Getting started — from a single limiter to a distributed, HTTP-integrated setup. |
+| [`extension-guide.md`](extension-guide.md) | Writing your own algorithm, storage backend, or key extractor. |
+| [`COMPATIBILITY.md`](COMPATIBILITY.md) | SemVer, MSRV (1.85), deprecation policy, extension stability tiers. |
+| [`security-review.md`](security-review.md) | Security posture: safe defaults, resource bounds, threat notes. |
+
 ## Map
 
 | Directory | Purpose | Audience | Ships to crates.io? |

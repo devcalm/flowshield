@@ -17,11 +17,22 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-D warnings"
 
-# NOTE: There is intentionally no MSRV job. Per ADR-015 (OQ-05), FlowShield does not
-# commit to a Minimum Supported Rust Version during the research/architecture phase;
-# it develops against current stable. An MSRV check will be added before the 1.0 release.
-
 jobs:
+  # Minimum Supported Rust Version (ADR-015, DV-02). FlowShield commits to Rust 1.85 (the
+  # edition-2024 floor) for its own code and the default in-memory build; this job verifies
+  # exactly that surface. The heavy optional features (redis/valkey/axum/actix) pull
+  # third-party trees whose MSRV is currently higher (~1.88), so they are intentionally NOT
+  # part of the MSRV guarantee — see docs/COMPATIBILITY.md.
+  msrv:
+    name: msrv (1.85, core + default)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check -p flowshield-core -p flowshield-memory --locked
+      - run: cargo check -p flowshield --locked # default features (memory)
+
   fmt:
     name: rustfmt
     runs-on: ubuntu-latest

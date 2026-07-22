@@ -1,9 +1,18 @@
 # ADR-015: Versioning, MSRV & Compatibility
 
-- **Status:** Accepted (MSRV value deferred to pre-1.0)
+- **Status:** Accepted — **MSRV resolved to 1.85 for 1.0** (Phase 7; DV-02 closed)
 - **Date: 2026-07-20**
 - **Deciders: FlowShield maintainers**
 - **Related:** ADR-013 (Extension API Stability), ADR-003 (Crate Structure), ADR-011 (Error Handling); NFR-030, NFR-031, NFR-032
+
+> **Phase 7 update (DV-02 resolved).** The deferred MSRV decision is now made:
+> **Rust 1.85** (the edition-2024 floor) is FlowShield's committed source MSRV. All first-party
+> crates compile on it and the default in-memory build is CI-verified against it. Because the heavy
+> optional features (`redis`/`valkey`/`axum`/`actix`) pull third-party trees whose own MSRV is
+> currently higher (~1.88), the *effective* MSRV of a build is the max of this floor and the enabled
+> features' requirements. Advancing the MSRV is a minor (non-breaking) change. The concrete
+> deprecation-window figure and the full policy now live in
+> [`docs/COMPATIBILITY.md`](../COMPATIBILITY.md).
 
 ## Context
 

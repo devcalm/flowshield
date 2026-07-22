@@ -17,10 +17,15 @@ members = [
 [workspace.package]
 edition = "2024"
 license = "MIT OR Apache-2.0"
-# MSRV is intentionally NOT declared during the research & architecture phases.
-# Per ADR-015 (OQ-05), FlowShield develops against current stable Rust and does not
-# advertise or enforce a Minimum Supported Rust Version until the API stabilizes for
-# the first public release. Do not add `rust-version` here until that policy is set.
+# Minimum Supported Rust Version (ADR-015, DV-02 — resolved for 1.0). 1.85 is the
+# edition-2024 floor and FlowShield's committed source MSRV: all first-party crates
+# compile on it, and the default in-memory build is CI-verified against it.
+#
+# Caveat, documented in docs/COMPATIBILITY.md: enabling the heavy optional features
+# (`redis`, `valkey`, `axum`, `actix`) pulls third-party dependency trees whose own MSRV
+# is currently higher (~1.88). The effective MSRV of a build is therefore the max of this
+# floor and the MSRV of the features you enable. This value governs FlowShield's own code.
+rust-version = "1.85"
 #
 # Shared package metadata, inherited by member crates via `<field>.workspace = true`.
 repository = "https://github.com/devcalm/flowshield"

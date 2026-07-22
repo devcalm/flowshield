@@ -1,8 +1,9 @@
 [package]
 name = "flowshield-redis"
-version = "0.2.0"
+version = "1.0.0"
 description = "Redis distributed backend for FlowShield — atomic, server-side rate-limit state over RESP."
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
@@ -17,15 +18,15 @@ include = [
 ]
 
 [dependencies]
-flowshield-core = { version = "0.2", path = "../flowshield-core" }
+flowshield-core = { version = "1", path = "../flowshield-core" }
 # The shared RESP logic (ADR-006). Redis and Valkey both wrap it.
-flowshield-resp = { version = "0.2", path = "../flowshield-resp" }
+flowshield-resp = { version = "1", path = "../flowshield-resp" }
 
 [dev-dependencies]
 # Integration tests run on a real Tokio runtime against a Redis from docker-compose.
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
 # The memory backend is the oracle the Lua is cross-checked against (ADR-019).
-flowshield-memory = { version = "0.2", path = "../flowshield-memory" }
+flowshield-memory = { version = "1", path = "../flowshield-memory" }
 # Dev-only, for the integration test's reachability probe. This is the redis-rs
 # client, used here directly only by the tests; the real backend logic (pool + Lua
 # execution) lives in flowshield-resp, which both flowshield-redis and flowshield-valkey

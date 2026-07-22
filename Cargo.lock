@@ -665,7 +665,7 @@ checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 
 [[package]]
 name = "flowshield"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "flowshield-actix",
  "flowshield-axum",
@@ -682,7 +682,7 @@ dependencies = [
 
 [[package]]
 name = "flowshield-actix"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "actix-web",
  "flowshield-core",
@@ -691,7 +691,7 @@ dependencies = [
 
 [[package]]
 name = "flowshield-axum"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "axum",
  "flowshield-core",
@@ -718,7 +718,7 @@ dependencies = [
 
 [[package]]
 name = "flowshield-core"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "metrics",
  "metrics-util",
@@ -730,7 +730,7 @@ dependencies = [
 
 [[package]]
 name = "flowshield-memory"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "flowshield-core",
  "proptest",
@@ -738,7 +738,7 @@ dependencies = [
 
 [[package]]
 name = "flowshield-redis"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "flowshield-core",
  "flowshield-memory",
@@ -749,7 +749,7 @@ dependencies = [
 
 [[package]]
 name = "flowshield-resp"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "deadpool-redis",
  "flowshield-core",
@@ -760,7 +760,7 @@ dependencies = [
 
 [[package]]
 name = "flowshield-tower"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "flowshield-core",
  "flowshield-memory",
@@ -773,7 +773,7 @@ dependencies = [
 
 [[package]]
 name = "flowshield-valkey"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "flowshield-core",
  "flowshield-memory",

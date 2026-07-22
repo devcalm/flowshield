@@ -1,8 +1,9 @@
 [package]
 name = "flowshield-axum"
-version = "0.2.0"
+version = "1.0.0"
 description = "Axum integration for FlowShield — per-key rate limiting middleware with 429 + Retry-After."
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
@@ -17,10 +18,10 @@ include = [
 ]
 
 [dependencies]
-flowshield-core = { version = "0.2", path = "../flowshield-core" }
+flowshield-core = { version = "1", path = "../flowshield-core" }
 # Axum-idiomatic ergonomics are added on top of the Tower layer (ADR-009), not
 # reimplemented — this crate reuses flowshield-tower's Layer/Service.
-flowshield-tower = { version = "0.2", path = "../flowshield-tower" }
+flowshield-tower = { version = "1", path = "../flowshield-tower" }
 # `ConnectInfo` (behind axum's `tokio` feature) for the client-address extractor, and
 # the `http` request types. Kept lean — the running server's HTTP features are pulled
 # in only for the example (below), not forced on library users.
@@ -29,7 +30,7 @@ http = "1"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "time"] }
-flowshield-memory = { version = "0.2", path = "../flowshield-memory" }
+flowshield-memory = { version = "1", path = "../flowshield-memory" }
 # `ServiceExt::oneshot` drives the router in the integration test.
 tower = { version = "0.5", features = ["util"] }
 # The example runs a real HTTP/1 server; those axum features are dev-only.

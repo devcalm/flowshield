@@ -1,3 +1,12 @@
+//! FlowShield core — the storage- and framework-agnostic engine: algorithms, the
+//! storage seam, the limiter, and the public extension traits.
+//!
+//! Most users depend on the [`flowshield`](https://docs.rs/flowshield) facade rather than
+//! this crate directly; see the architecture overview and ADR-018 for the split. Advanced
+//! users and ecosystem crates (custom backends, algorithms, integrations) build on the
+//! extension traits here — see the extension-author guide in the repository's `docs/`.
+#![forbid(unsafe_code)]
+
 pub mod algorithm;
 pub mod composite;
 pub mod decision;

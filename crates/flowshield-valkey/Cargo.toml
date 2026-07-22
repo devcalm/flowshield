@@ -1,8 +1,9 @@
 [package]
 name = "flowshield-valkey"
-version = "0.2.0"
+version = "1.0.0"
 description = "Valkey distributed backend for FlowShield — atomic, server-side rate-limit state over RESP."
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
@@ -17,13 +18,13 @@ include = [
 ]
 
 [dependencies]
-flowshield-core = { version = "0.2", path = "../flowshield-core" }
+flowshield-core = { version = "1", path = "../flowshield-core" }
 # The shared RESP logic (ADR-006), identical to what flowshield-redis wraps.
-flowshield-resp = { version = "0.2", path = "../flowshield-resp" }
+flowshield-resp = { version = "1", path = "../flowshield-resp" }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
-flowshield-memory = { version = "0.2", path = "../flowshield-memory" }
+flowshield-memory = { version = "1", path = "../flowshield-memory" }
 # Dev-only, for the integration test's reachability probe. This is the redis-rs
 # client, which speaks RESP and so connects to a Valkey server unchanged (ADR-006);
 # Valkey needs no separate client crate. The real backend logic lives in flowshield-resp.

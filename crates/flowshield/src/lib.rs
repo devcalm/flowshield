@@ -9,16 +9,14 @@
 //!
 //! ```toml
 //! [dependencies]
-//! flowshield = "0.1"
+//! flowshield = "1"
 //! ```
 //!
-//! Once the API lands (see the project roadmap), typical usage will be:
+//! Typical usage keys on the facade re-exports rather than reaching into the core crate:
 //!
 //! ```ignore
-//! use flowshield::Limiter;
+//! use flowshield::{Key, LimiterBuilder, MemoryStore, TokenBucket};
 //! ```
-//!
-//! rather than reaching into the core crate directly.
 //!
 //! ## Facade vs. core
 //!
@@ -69,9 +67,11 @@
 //!
 //! ## Status
 //!
-//! FlowShield is in early development (Phase 1). The core API is taking shape; the
-//! re-exports below track `flowshield-core`'s public surface and grow as backends and
-//! integrations land.
+//! FlowShield is at **1.0 readiness**: core, backends (in-memory, Redis, Valkey),
+//! framework integrations (Tower, Axum, Actix), observability, and a benchmark suite have
+//! all shipped. See the [compatibility policy] for SemVer, MSRV, and deprecation guarantees.
+//!
+//! [compatibility policy]: https://github.com/devcalm/flowshield/blob/main/docs/COMPATIBILITY.md
 
 /// The stable, user-facing API, re-exported from `flowshield-core`.
 #[doc(inline)]

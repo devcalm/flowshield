@@ -1,8 +1,9 @@
 [package]
 name = "flowshield-resp"
-version = "0.2.0"
+version = "1.0.0"
 description = "Shared RESP (Redis/Valkey) backend logic for FlowShield — atomic, server-side rate-limit state via Lua."
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
@@ -20,7 +21,7 @@ include = [
 
 [dependencies]
 # The bridge (`Evaluate`) and the family-B capability (`RespScripted`) live in core.
-flowshield-core = { version = "0.2", path = "../flowshield-core" }
+flowshield-core = { version = "1", path = "../flowshield-core" }
 
 # RESP client + pool (ADR-016: Tokio-coupled backend, disclosed here at the crate
 # boundary). `redis` provides the async `Script` (EVALSHA with EVAL fallback);
@@ -36,4 +37,4 @@ tokio = { workspace = true, features = ["time"] }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
 # The cross-check test drives the same algorithm through the memory backend as an
 # oracle for the Lua (ADR-019).
-flowshield-memory = { version = "0.2", path = "../flowshield-memory" }
+flowshield-memory = { version = "1", path = "../flowshield-memory" }

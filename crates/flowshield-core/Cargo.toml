@@ -1,8 +1,9 @@
 [package]
 name = "flowshield-core"
-version = "0.2.0"
+version = "1.0.0"
 description = "Core traits and types for FlowShield — storage- and framework-agnostic traffic management and rate limiting for Rust."
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true

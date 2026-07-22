@@ -4,9 +4,38 @@ All notable changes to FlowShield are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) (see [ADR-015](docs/adr/ADR-015-versioning-and-msrv.md)).
 
-> While the project is in Phase 0 (design), this changelog tracks design milestones. Once code is released, entries will track per-crate library changes.
-
 ## [Unreleased]
+
+## [1.0.0] - 2026-07-22
+
+First stable release. The public API — including the extension traits — is now covered by the
+SemVer and deprecation guarantees in [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md).
+
+### Added
+- **Phase 7 — 1.0 readiness (hardening, docs, policy).**
+  - **Committed MSRV of Rust 1.85** (edition-2024 floor; resolves DV-02). `rust-version` is
+    declared workspace-wide, a CI `msrv` job verifies `flowshield-core`, `flowshield-memory`, and
+    the default `flowshield` build on 1.85. The effective MSRV of the heavy optional features
+    (`redis`/`valkey`/`axum`/`actix`) is governed by their upstream ecosystems (currently ~1.88) —
+    documented in `docs/COMPATIBILITY.md`.
+  - **`#![forbid(unsafe_code)]` added to `flowshield-core`** — the one library crate that lacked it;
+    every first-party crate now forbids `unsafe`.
+  - **Documentation set:** a getting-started [tutorial](docs/tutorial.md), an
+    [extension-author guide](docs/extension-guide.md) with per-trait stability tiers, a
+    [compatibility & versioning policy](docs/COMPATIBILITY.md) (SemVer, MSRV, deprecation window,
+    extension-API tiers), and a [security review & posture](docs/security-review.md).
+  - **README rewritten** to reflect the shipped state (was still marked "Phase 0 — no code written").
+
+### Changed
+- **All published crates bumped to `1.0.0`** with synchronized versions; inter-crate dependency
+  requirements updated to `1`.
+
+### Notes
+- **Deferred beyond 1.0 (tracked):** empirical multi-node over-admission bound (DV-01) and ratified
+  numeric performance targets (DV-03) await a dedicated benchmark host; both guarantees are
+  documented qualitatively.
+
+<!-- Everything below shipped during the 0.x cycle and is consolidated into 1.0.0. -->
 
 ### Added
 - **Phase 6 — Benchmarking suite** (ADR-014). New non-published `flowshield-benchmarks`

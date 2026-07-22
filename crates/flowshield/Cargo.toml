@@ -1,8 +1,9 @@
 [package]
 name = "flowshield"
-version = "0.2.0"
+version = "1.0.0"
 description = "Ergonomic traffic management and rate limiting for Rust — the public facade over flowshield-core."
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
@@ -50,19 +51,19 @@ tracing = ["flowshield-core/tracing"]
 # The facade re-exports the stable public API from the core crate. Both a version
 # (used when published to crates.io) and a path (used inside this workspace) are
 # specified so local builds and published builds resolve correctly.
-flowshield-core = { version = "0.2", path = "../flowshield-core" }
+flowshield-core = { version = "1", path = "../flowshield-core" }
 
 # The default in-memory backend, forwarded through the `memory` feature above.
-flowshield-memory = { version = "0.2", path = "../flowshield-memory", optional = true }
+flowshield-memory = { version = "1", path = "../flowshield-memory", optional = true }
 
 # Distributed backends, forwarded through the `redis` / `valkey` features above.
-flowshield-redis = { version = "0.2", path = "../flowshield-redis", optional = true }
-flowshield-valkey = { version = "0.2", path = "../flowshield-valkey", optional = true }
+flowshield-redis = { version = "1", path = "../flowshield-redis", optional = true }
+flowshield-valkey = { version = "1", path = "../flowshield-valkey", optional = true }
 
 # Framework integrations, forwarded through the `tower` / `axum` / `actix` features.
-flowshield-tower = { version = "0.2", path = "../flowshield-tower", optional = true }
-flowshield-axum = { version = "0.2", path = "../flowshield-axum", optional = true }
-flowshield-actix = { version = "0.2", path = "../flowshield-actix", optional = true }
+flowshield-tower = { version = "1", path = "../flowshield-tower", optional = true }
+flowshield-axum = { version = "1", path = "../flowshield-axum", optional = true }
+flowshield-actix = { version = "1", path = "../flowshield-actix", optional = true }
 
 [dev-dependencies]
 # Examples run on a real async runtime, the way a service would. Dev-only: never part
