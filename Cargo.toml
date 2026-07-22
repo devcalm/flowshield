@@ -12,6 +12,7 @@ members = [
     "crates/flowshield-axum",
     "crates/flowshield-actix",
     "crates/flowshield-benchmarks",
+    "crates/flowshield-e2e",
 ]
 
 [workspace.package]

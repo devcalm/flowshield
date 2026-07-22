@@ -8,9 +8,9 @@
 //! ```
 //!
 //! The tests are **reachability-gated**: if no server answers they skip (so a plain
-//! `cargo test` without the services stays green), unless `CI` or
-//! `FLOWSHIELD_REQUIRE_REDIS` is set, in which case an unreachable server is a hard
-//! failure — that is how CI guarantees the distributed path is actually exercised.
+//! `cargo test` without the services stays green), unless `FLOWSHIELD_REQUIRE_REDIS` is
+//! set, in which case an unreachable server is a hard failure — that is how the CI
+//! `integration` job guarantees the distributed path is actually exercised.
 
 use flowshield_core::algorithm::gcra::Gcra;
 use flowshield_core::algorithm::token_bucket::TokenBucket;
@@ -28,8 +28,13 @@ fn redis_url() -> String {
     std::env::var("FLOWSHIELD_REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".into())
 }
 
+// Keyed on `FLOWSHIELD_REQUIRE_REDIS` only — deliberately NOT on `CI`. GitHub sets
+// `CI=true` in every job, including the plain `test` job that has no Redis service; a
+// `CI`-inclusive predicate would turn these gated tests into a hard failure there. The
+// dedicated `integration` job sets `FLOWSHIELD_REQUIRE_REDIS=1`, which is what actually
+// guarantees the distributed path is exercised.
 fn redis_required() -> bool {
-    std::env::var("CI").is_ok() || std::env::var("FLOWSHIELD_REQUIRE_REDIS").is_ok()
+    std::env::var("FLOWSHIELD_REQUIRE_REDIS").is_ok()
 }
 
 /// `true` if a RESP server answers `PING` at `url`.
@@ -53,7 +58,7 @@ macro_rules! gate {
         if !reachable(&$url).await {
             if redis_required() {
                 panic!(
-                    "Redis required (CI/FLOWSHIELD_REQUIRE_REDIS) but unreachable at {}",
+                    "Redis required (FLOWSHIELD_REQUIRE_REDIS) but unreachable at {}",
                     $url
                 );
             }

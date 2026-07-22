@@ -138,4 +138,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test -p flowshield-redis -p flowshield-valkey --locked
+      # `flowshield-e2e` drives real HTTP (Axum/Actix) through to real Redis. Its Redis-gated
+      # tests hard-fail here because FLOWSHIELD_REQUIRE_REDIS=1 is set above; its always-run
+      # tests (in-memory + dead-Redis degradation) also run in the plain `test` job.
+      - run: cargo test -p flowshield-redis -p flowshield-valkey -p flowshield-e2e --locked

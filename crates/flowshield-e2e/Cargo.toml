@@ -1,0 +1,39 @@
+[package]
+name = "flowshield-e2e"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "End-to-end HTTP-over-TCP tests: real frameworks + real Redis. Not published."
+
+# This crate exists only to exercise the whole stack in tests; it is never released.
+publish = false
+
+[lints.rust]
+# A test-only crate with no public API to document.
+missing_docs = "allow"
+
+[dev-dependencies]
+# The public facade with every integration the suite drives (axum also enables tower).
+flowshield = { path = "../flowshield", features = ["memory", "redis", "axum", "actix"] }
+
+# A real HTTP client over a real socket. Localhost plain http:// only, so TLS/HTTP-2 are
+# off — we only read status codes and raw headers.
+reqwest = { version = "0.12", default-features = false }
+
+# The web frameworks themselves, to stand up real servers on ephemeral ports.
+axum = { version = "0.8", default-features = false, features = ["tokio", "http1"] }
+actix-web = { version = "4", default-features = false, features = ["macros"] }
+
+# Runtime + ephemeral-port bind + task handles + oneshot channel.
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "time", "sync"] }
+
+# `HeaderName::from_static` for the per-run-unique API-key header.
+http = "1"
+
+# Reachability probe ONLY — identical to flowshield-redis's dev-dep. The real backend
+# logic lives in flowshield-resp; this is just used to PING before running gated tests.
+redis = { version = "0.27", default-features = false, features = ["tokio-comp", "script"] }

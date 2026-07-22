@@ -12,6 +12,19 @@ First stable release. The public API — including the extension traits — is n
 SemVer and deprecation guarantees in [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md).
 
 ### Added
+- **End-to-end test suite** — a new non-published `flowshield-e2e` crate drives **real HTTP over
+  a real socket** (reqwest → Axum and Actix servers on ephemeral ports) all the way through to a
+  **real Redis** backend, asserting `429`/`Retry-After`/`X-RateLimit-Remaining`. Headline test:
+  two independent Axum servers sharing one Redis enforce a **single global limit** (remaining
+  descends across both, then `429` on either) — the distributed guarantee proven end-to-end.
+  Redis-gated tests skip locally and hard-fail in the `integration` CI job; always-run tests cover
+  the in-memory path, a `Retry-After`-honoring refill, and fail-open/closed against a dead backend.
+  Adds **local-only stress tests** (`#[ignore]`d, never in CI) — a full **2×2 matrix** of
+  {Axum, Actix} × {Redis, in-memory} — that fire a concurrent HTTP herd and assert **no
+  over-admission**: a capacity-`N` bucket admits exactly `N` under tens of thousands of requests
+  (verified at 20k req → exactly 500 admitted per combo). In-flight concurrency is bounded so the
+  load scales without exhausting file descriptors; total load is tunable via
+  `FLOWSHIELD_STRESS_REQUESTS` / `FLOWSHIELD_STRESS_CAPACITY`.
 - **Phase 7 — 1.0 readiness (hardening, docs, policy).**
   - **Committed MSRV of Rust 1.85** (edition-2024 floor; resolves DV-02). `rust-version` is
     declared workspace-wide, a CI `msrv` job verifies `flowshield-core`, `flowshield-memory`, and

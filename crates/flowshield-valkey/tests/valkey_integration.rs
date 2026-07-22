@@ -1,7 +1,7 @@
 //! Integration tests for the Valkey backend against a **real** server (ADR-006, FR-022).
 //!
 //! Provisioning is via `docker-compose` (Valkey on port 6380). Reachability-gated:
-//! skips when absent, hard-fails when `CI` / `FLOWSHIELD_REQUIRE_VALKEY` is set.
+//! skips when absent, hard-fails when `FLOWSHIELD_REQUIRE_VALKEY` is set.
 //!
 //!   docker compose up -d
 //!   cargo test -p flowshield-valkey
@@ -21,8 +21,11 @@ fn valkey_url() -> String {
     std::env::var("FLOWSHIELD_VALKEY_URL").unwrap_or_else(|_| "redis://127.0.0.1:6380".into())
 }
 
+// Keyed on `FLOWSHIELD_REQUIRE_VALKEY` only — deliberately NOT on `CI` (which GitHub sets
+// in every job, including the plain `test` job that has no Valkey service). The dedicated
+// `integration` job sets `FLOWSHIELD_REQUIRE_VALKEY=1` to force the hard failure.
 fn valkey_required() -> bool {
-    std::env::var("CI").is_ok() || std::env::var("FLOWSHIELD_REQUIRE_VALKEY").is_ok()
+    std::env::var("FLOWSHIELD_REQUIRE_VALKEY").is_ok()
 }
 
 async fn reachable(url: &str) -> bool {
