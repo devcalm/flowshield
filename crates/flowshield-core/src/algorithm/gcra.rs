@@ -141,6 +141,13 @@ impl Algorithm for Gcra {
         "gcra"
     }
 
+    fn min_ttl(&self) -> Duration {
+        // The schedule (`tat`) sits at most `τ + T` ahead of now — i.e. `burst · T` after
+        // a full burst. Once `now` passes `tat` the key is neutral again, so state must
+        // persist that long or an idle key expiring resets to a fresh schedule.
+        self.tau.saturating_add(self.emission_interval)
+    }
+
     fn initial(&self, now: Duration) -> Self::State {
         // A fresh key is fully idle: its schedule sits at `now`, so the full
         // burst is immediately available.
@@ -169,7 +176,11 @@ impl Algorithm for Gcra {
         // Using the *stored* `tat` (not clamped to `now`): an idle key has a
         // `tat` in the past, which pushes `earliest` before `now` and admits.
         let extra = nanos_to_duration(interval_nanos.saturating_mul((cost - 1) as u128));
-        let earliest = (tat + extra).saturating_sub(self.tau);
+        // `saturating_add`, not `+`: `Duration`'s `Add` panics on overflow, and `extra`
+        // can reach ~`Duration::MAX` for an enormous `cost`. Saturating here keeps `step`
+        // panic-free as the contract requires (ADR-011, FR-072); the subsequent
+        // `saturating_sub` then yields a huge `earliest`, so the request is rejected.
+        let earliest = tat.saturating_add(extra).saturating_sub(self.tau);
 
         if now < earliest {
             // Non-conforming: leave the schedule untouched and report the wait.
@@ -286,6 +297,29 @@ mod tests {
             Decision::Allowed(a) => a.remaining,
             _ => None,
         }
+    }
+
+    #[test]
+    fn huge_cost_rejects_without_panicking() {
+        // Regression: `tat + extra` used `Duration`'s panicking `Add`. With a schedule
+        // already ahead of `now` and an enormous cost, `extra` saturates near `Duration::MAX`
+        // — the sum must saturate (not panic) and the request must be rejected.
+        let gcra = Gcra::new(0.5, 1).unwrap(); // T = 2s
+        let state = GcraState {
+            tat: Duration::from_secs(1),
+        };
+        let (_, d) = gcra.step(state, Duration::from_secs(1), u64::MAX);
+        assert!(
+            !d.is_allowed(),
+            "an unsatisfiable cost must reject, not panic"
+        );
+    }
+
+    #[test]
+    fn min_ttl_is_burst_times_interval() {
+        // 1 req/sec, burst 3 ⇒ T = 1s, τ = 2s ⇒ the schedule sits at most 3s ahead.
+        let gcra = Gcra::new(1.0, 3).unwrap();
+        assert_eq!(gcra.min_ttl(), Duration::from_secs(3));
     }
 
     #[test]

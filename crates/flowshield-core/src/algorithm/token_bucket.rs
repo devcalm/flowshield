@@ -50,6 +50,13 @@ impl TokenBucket {
         if capacity == 0 {
             return Err(Error::Config("capacity must be greater than zero".into()));
         }
+        // The RESP backends marshal `capacity` as a Redis integer (`i64`); a value above
+        // `i64::MAX` would wrap negative server-side and reject every request while the
+        // in-memory backend admits — a silent cross-backend divergence. Reject it here so
+        // both backends agree and the misconfiguration fails fast (FR-072).
+        if capacity > i64::MAX as u64 {
+            return Err(Error::Config("capacity must not exceed i64::MAX".into()));
+        }
         let interval_nanos = refill_interval.as_nanos();
         if interval_nanos == 0 {
             return Err(Error::Config(
@@ -107,6 +114,14 @@ impl Algorithm for TokenBucket {
 
     fn name(&self) -> &'static str {
         "token_bucket"
+    }
+
+    fn min_ttl(&self) -> Duration {
+        // Time for a fully-drained bucket to refill to capacity: `capacity · interval`.
+        // Below this, an idle drained key that expires would reset to full and bypass the
+        // limit. `saturating_mul` (capacity ≤ i64::MAX, interval_nanos ≤ u64::MAX) and
+        // `nanos_to_duration` (saturates seconds) keep this panic-free.
+        nanos_to_duration((self.capacity as u128).saturating_mul(self.interval_nanos))
     }
 
     fn initial(&self, now: Duration) -> Self::State {
@@ -281,6 +296,29 @@ mod tests {
             Decision::Allowed(a) => a.remaining,
             _ => None,
         }
+    }
+
+    #[test]
+    fn capacity_above_i64_max_is_rejected() {
+        // A capacity that would wrap negative when marshalled to Redis (i64) must fail at
+        // construction so both backends agree (regression: silent RESP-vs-memory divergence).
+        assert!(matches!(
+            TokenBucket::new(i64::MAX as u64 + 1, Duration::from_secs(1)),
+            Err(Error::Config(_))
+        ));
+        assert!(matches!(
+            TokenBucket::per_second(u64::MAX, 1),
+            Err(Error::Config(_))
+        ));
+        // The boundary value itself is fine.
+        assert!(TokenBucket::new(i64::MAX as u64, Duration::from_secs(1)).is_ok());
+    }
+
+    #[test]
+    fn min_ttl_is_time_to_refill_from_empty() {
+        // capacity 10, 2 tokens/sec ⇒ 5s to refill fully ⇒ state must persist ≥ 5s.
+        let tb = TokenBucket::per_second(10, 2).unwrap();
+        assert_eq!(tb.min_ttl(), Duration::from_secs(5));
     }
 
     #[test]

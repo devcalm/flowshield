@@ -255,5 +255,22 @@ fn too_many_requests(retry_after: Duration) -> HttpResponse {
 
 /// `Retry-After` uses whole seconds; round **up** so a client never retries early.
 fn retry_after_secs(d: Duration) -> u64 {
-    d.as_secs() + u64::from(d.subsec_nanos() > 0)
+    // `saturating_add` so a near-`u64::MAX`-seconds wait cannot overflow to `0` (which
+    // would emit `Retry-After: 0` and invite an immediate retry) or panic in debug.
+    d.as_secs().saturating_add(u64::from(d.subsec_nanos() > 0))
+}
+
+#[cfg(test)]
+mod retry_after_tests {
+    use super::retry_after_secs;
+    use std::time::Duration;
+
+    #[test]
+    fn rounds_sub_second_up_and_saturates_without_zero() {
+        assert_eq!(retry_after_secs(Duration::from_millis(1)), 1); // sub-second rounds UP
+        assert_eq!(retry_after_secs(Duration::from_secs(3)), 3); // whole seconds unchanged
+        // Regression: a near-u64::MAX wait must not overflow to 0 (immediate-retry) or panic.
+        let huge = Duration::new(u64::MAX, 999_999_999);
+        assert_eq!(retry_after_secs(huge), u64::MAX);
+    }
 }

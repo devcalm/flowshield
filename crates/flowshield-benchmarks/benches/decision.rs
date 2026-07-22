@@ -30,10 +30,12 @@ fn bench_allow_path(c: &mut Criterion) {
         // --- Token Bucket (default). Huge capacity ⇒ always admits ⇒ accept path. ---
         {
             let store = MemoryStore::with_capacity(cap).unwrap();
-            let limiter =
-                LimiterBuilder::new(TokenBucket::per_second(u64::MAX, 1_000_000).unwrap(), store)
-                    .build()
-                    .unwrap();
+            let limiter = LimiterBuilder::new(
+                TokenBucket::per_second(i64::MAX as u64, 1_000_000).unwrap(),
+                store,
+            )
+            .build()
+            .unwrap();
             let mut i = 0usize;
             group.throughput(Throughput::Elements(1));
             group.bench_with_input(BenchmarkId::new("token_bucket", n), &n, |b, _| {

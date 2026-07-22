@@ -24,4 +24,11 @@
 //!
 //! Scale the load with `FLOWSHIELD_STRESS_REQUESTS` (default 1000) and
 //! `FLOWSHIELD_STRESS_CAPACITY` (default 100).
+//!
+//! ## Load benchmark (local-only)
+//!
+//! `tests/load.rs` measures whole-stack **latency (p50…p99.9) and throughput** over real HTTP
+//! → Axum → Redis on the always-admit path (in-memory baseline included). Also `#[ignore]`d;
+//! run with `cargo test -p flowshield-e2e --release --test load -- --ignored --nocapture` and
+//! see `docs/benchmarks/` for a dated results snapshot.
 #![forbid(unsafe_code)]

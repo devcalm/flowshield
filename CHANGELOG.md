@@ -11,6 +11,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 First stable release. The public API — including the extension traits — is now covered by the
 SemVer and deprecation guarantees in [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md).
 
+### Fixed
+
+Correctness fixes from the pre-1.0 adversarial review (each with a regression test):
+- **Idle-reset limit bypass with the default TTL.** The limiter used a fixed 60s default TTL
+  unrelated to the algorithm's decay time, so for any config where full decay takes >60s (e.g.
+  `TokenBucket::per_second(1000, 10)`) an idle key would expire and reset to fully-permissive — a
+  client could restore its allowance by pausing. `LimiterBuilder` now **derives** the default TTL
+  from the algorithm (`Algorithm::min_ttl()`, a new provided method): `max(min_ttl, 60s)`. An
+  explicit `.ttl()` is still honored verbatim (documented escape hatch).
+- **GCRA `step()` could panic** ("overflow when adding durations") on a very large `check_n` cost —
+  a `Duration + Duration` that should have been `saturating_add`. Now saturates (rejects), honoring
+  the never-panic contract (ADR-011/FR-072).
+- **RESP backends silently diverged from memory on out-of-`i64` values.** A `TokenBucket` capacity
+  `> i64::MAX` wrapped negative in the Redis/Valkey Lua and rejected everything (memory admitted);
+  a `cost > i64::MAX` inverted the decision (minted tokens). Capacity is now rejected at construction
+  and oversized cost as a typed error, so backends agree and misuse fails fast.
+- **`Retry-After` header could overflow to `0`** (or panic in debug) for a near-`u64::MAX`-seconds
+  wait in the Tower and Actix integrations — `Retry-After: 0` invites an immediate retry. Now
+  saturates.
+
 ### Added
 - **End-to-end test suite** — a new non-published `flowshield-e2e` crate drives **real HTTP over
   a real socket** (reqwest → Axum and Actix servers on ephemeral ports) all the way through to a
@@ -25,6 +45,12 @@ SemVer and deprecation guarantees in [`docs/COMPATIBILITY.md`](docs/COMPATIBILIT
   (verified at 20k req → exactly 500 admitted per combo). In-flight concurrency is bounded so the
   load scales without exhausting file descriptors; total load is tunable via
   `FLOWSHIELD_STRESS_REQUESTS` / `FLOWSHIELD_STRESS_CAPACITY`.
+- **End-to-end load benchmark** (`flowshield-e2e/tests/load.rs`, `#[ignore]`d/local-only) — measures
+  **whole-stack latency (p50…p99.9) and throughput** over real HTTP → Axum → real Redis on the
+  always-admit path, with an in-memory baseline for contrast. A dated Apple-M1 snapshot is published
+  in `docs/benchmarks/e2e-load-2026-07-22-apple-m1.md` (in-memory ~96k req/s @ p50 0.5 ms; Redis
+  ~16k req/s @ p50 3.8 ms — the loopback round-trip cost). Per ADR-014 these are dated data points,
+  not targets.
 - **Phase 7 — 1.0 readiness (hardening, docs, policy).**
   - **Committed MSRV of Rust 1.85** (edition-2024 floor; resolves DV-02). `rust-version` is
     declared workspace-wide, a CI `msrv` job verifies `flowshield-core`, `flowshield-memory`, and

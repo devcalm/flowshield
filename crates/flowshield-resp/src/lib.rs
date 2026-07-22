@@ -158,6 +158,12 @@ async fn run_script(
     cost: u64,
     params: &[i64],
 ) -> Result<Decision> {
+    // `cost` is marshalled as a Redis integer (`i64`); a value above `i64::MAX` would wrap
+    // negative in the Lua and *invert* the decision (mint tokens / rewind the schedule).
+    // Reject it as a typed config error rather than silently misbehave (ADR-011, FR-072).
+    if cost > i64::MAX as u64 {
+        return Err(Error::Config("cost must not exceed i64::MAX".into()));
+    }
     let mut conn = pool.get().await.map_err(|e| Error::Backend(Box::new(e)))?;
     let mut invocation = script.prepare_invoke();
     invocation

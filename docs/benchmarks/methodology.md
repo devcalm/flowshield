@@ -21,6 +21,16 @@ user would enable, so it measures the public surface, not internal shortcuts.
 | `examples/concurrency_10k.rs` | JSON scenario | 10k concurrent tasks complete without deadlock/panic (NFR-004) |
 | `examples/allocations.rs` | JSON scenario | Heap allocations per decision on the hot path |
 
+One more lives outside this crate, in `flowshield-e2e` (it needs the framework + real-Redis deps):
+
+| Target | Kind | Scenario |
+|---|---|---|
+| `flowshield-e2e/tests/load.rs` | `#[ignore]`d load test | **Whole-stack** latency (p50…p99.9) + throughput over real HTTP → Axum → Redis, always-admit path |
+
+Run it locally with `cargo test -p flowshield-e2e --release --test load -- --ignored --nocapture`
+(tunable via `FLOWSHIELD_LOAD_REQUESTS` / `FLOWSHIELD_LOAD_CONCURRENCY`); see the dated
+[e2e-load results](./e2e-load-2026-07-22-apple-m1.md). It is local-only — never in CI.
+
 ## Tools and why
 
 - **[Criterion](https://github.com/bheisler/criterion.rs)** for the microbenchmarks. It

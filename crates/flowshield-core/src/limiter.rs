@@ -125,11 +125,17 @@ where
     }
 }
 
+/// The default TTL floor when the algorithm expresses no minimum decay time (e.g. an
+/// out-of-crate algorithm that does not override [`Algorithm::min_ttl`]).
+const DEFAULT_TTL: Duration = Duration::from_secs(60);
+
 pub struct LimiterBuilder<A, S, C> {
     algorithm: A,
     store: S,
     clock: C,
-    ttl: Duration,
+    /// `None` = derive a safe default from the algorithm (see [`build`](Self::build));
+    /// `Some` = the caller set it explicitly and it is respected verbatim.
+    ttl: Option<Duration>,
     degrade: DegradationPolicy,
 }
 
@@ -139,14 +145,21 @@ impl<A: Algorithm, S: Evaluate<A>> LimiterBuilder<A, S, MonotonicClock> {
             algorithm,
             store,
             clock: MonotonicClock::default(),
-            ttl: Duration::from_secs(60),
+            ttl: None,
             degrade: DegradationPolicy::FailClosed,
         }
     }
 }
 impl<A: Algorithm, S: Evaluate<A>, C: TimeSource> LimiterBuilder<A, S, C> {
+    /// Set the per-key state TTL explicitly.
+    ///
+    /// If left unset, [`build`](Self::build) derives a safe default: the larger of the
+    /// algorithm's [`min_ttl`](Algorithm::min_ttl) (its full decay time) and a 60s floor, so
+    /// the out-of-the-box limiter cannot be bypassed by idling. **Setting a TTL shorter than
+    /// the algorithm's decay time lets a client reset its allowance by pausing** — do so only
+    /// when bounded memory matters more than exact limiting across idle gaps.
     pub fn ttl(mut self, ttl: Duration) -> Self {
-        self.ttl = ttl;
+        self.ttl = Some(ttl);
         self
     }
     pub fn degradation(mut self, p: DegradationPolicy) -> Self {
@@ -164,7 +177,14 @@ impl<A: Algorithm, S: Evaluate<A>, C: TimeSource> LimiterBuilder<A, S, C> {
     }
 
     pub fn build(self) -> Result<Limiter<A, S, C>> {
-        if self.ttl.is_zero() {
+        // An unset TTL is derived from the algorithm so the default configuration keeps a
+        // limit in force across idle gaps (an under-long TTL would let an idle key expire and
+        // reset to fully-permissive — a silent bypass). An explicit TTL is honored as given.
+        let ttl = match self.ttl {
+            Some(ttl) => ttl,
+            None => self.algorithm.min_ttl().max(DEFAULT_TTL),
+        };
+        if ttl.is_zero() {
             return Err(Error::Config("ttl must be greater than zero".into()));
         }
         // Resolve the static telemetry labels once, here, rather than on every
@@ -177,7 +197,7 @@ impl<A: Algorithm, S: Evaluate<A>, C: TimeSource> LimiterBuilder<A, S, C> {
             algorithm: self.algorithm,
             store: self.store,
             clock: self.clock,
-            ttl: self.ttl,
+            ttl,
             degrade: self.degrade,
             labels,
         })
@@ -222,6 +242,55 @@ mod tests {
 
         clock.advance(Duration::from_secs(1)); // refill one token
         assert!(block_on(limiter.check(&key)).unwrap().is_allowed());
+    }
+
+    #[test]
+    fn default_ttl_holds_the_limit_across_an_idle_gap() {
+        // capacity 1, one token per 100s ⇒ the algorithm's min_ttl is 100s. With the old
+        // fixed 60s default TTL an idle drained key would expire at 60s and reset to full — a
+        // silent bypass. The derived default (max(min_ttl, 60s) = 100s) keeps it limited.
+        let clock = Arc::new(TestClock::default());
+        let limiter = LimiterBuilder::new(
+            TokenBucket::new(1, Duration::from_secs(100)).unwrap(),
+            MemoryStore::new(),
+        )
+        .clock(clock.clone())
+        .build() // no explicit ttl → derived from the algorithm
+        .unwrap();
+        let k = Key::from("idler");
+
+        assert!(block_on(limiter.check(&k)).unwrap().is_allowed()); // drain the one token
+        assert!(!block_on(limiter.check(&k)).unwrap().is_allowed()); // now rejected
+
+        clock.advance(Duration::from_secs(60)); // past the OLD 60s default, short of 100s
+        assert!(
+            !block_on(limiter.check(&k)).unwrap().is_allowed(),
+            "derived TTL must keep a drained key limited across a 60s idle gap"
+        );
+    }
+
+    #[test]
+    fn explicit_short_ttl_is_respected() {
+        // An explicit TTL is honored verbatim (the documented escape hatch): a drained key
+        // idle past that TTL is reclaimed and behaves as fresh.
+        let clock = Arc::new(TestClock::default());
+        let limiter = LimiterBuilder::new(
+            TokenBucket::new(1, Duration::from_secs(100)).unwrap(),
+            MemoryStore::new(),
+        )
+        .clock(clock.clone())
+        .ttl(Duration::from_secs(5))
+        .build()
+        .unwrap();
+        let k = Key::from("idler");
+
+        assert!(block_on(limiter.check(&k)).unwrap().is_allowed()); // drain
+        assert!(!block_on(limiter.check(&k)).unwrap().is_allowed()); // rejected
+        clock.advance(Duration::from_secs(10)); // past the explicit 5s TTL
+        assert!(
+            block_on(limiter.check(&k)).unwrap().is_allowed(),
+            "an explicit short TTL is respected: the idle key is reclaimed as fresh"
+        );
     }
 
     #[test]

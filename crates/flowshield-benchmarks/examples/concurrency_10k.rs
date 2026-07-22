@@ -37,7 +37,7 @@ async fn run_regime(name: &'static str, per_task_key: bool) -> Outcome {
     // the allowed/rejected split is still reported for correctness confidence.
     let limiter = Arc::new(
         LimiterBuilder::new(
-            TokenBucket::per_second(u64::MAX, 1_000_000).unwrap(),
+            TokenBucket::per_second(i64::MAX as u64, 1_000_000).unwrap(),
             MemoryStore::with_capacity(4 * TASKS).unwrap(),
         )
         .build()

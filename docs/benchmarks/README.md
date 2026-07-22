@@ -9,9 +9,10 @@ See [ADR-014 — Benchmarking](../adr/ADR-014-benchmarking.md) for the governing
 Contents:
 - **[`methodology.md`](./methodology.md)** — environment, tools, scenarios, workload
   parameters, statistical treatment, how to reproduce, and the regression-gating workflow.
-- **Results snapshots** — dated, machine-scoped narrative summaries (e.g.
-  [`results-2026-07-22-apple-m1.md`](./results-2026-07-22-apple-m1.md)); Criterion's
-  machine-readable `estimates.json` lives under `target/criterion/` per run.
+- **Results snapshots** — dated, machine-scoped narrative summaries: the in-process microbenchmarks
+  ([`results-2026-07-22-apple-m1.md`](./results-2026-07-22-apple-m1.md)) and the whole-stack
+  HTTP→Redis latency/throughput run ([`e2e-load-2026-07-22-apple-m1.md`](./e2e-load-2026-07-22-apple-m1.md));
+  Criterion's machine-readable `estimates.json` lives under `target/criterion/` per run.
 
 The benchmark **code** is in the non-published [`flowshield-benchmarks`](../../crates/flowshield-benchmarks)
 crate. The regression gate is [`scripts/bench_regression.py`](../../scripts/bench_regression.py).

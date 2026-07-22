@@ -87,7 +87,7 @@ fn main() {
     // Token Bucket, single hot key.
     {
         let limiter = LimiterBuilder::new(
-            TokenBucket::per_second(u64::MAX, 1_000_000).unwrap(),
+            TokenBucket::per_second(i64::MAX as u64, 1_000_000).unwrap(),
             MemoryStore::with_capacity(1024).unwrap(),
         )
         .build()
@@ -117,7 +117,7 @@ fn main() {
     {
         let keys = key_pool(100_000);
         let limiter = LimiterBuilder::new(
-            TokenBucket::per_second(u64::MAX, 1_000_000).unwrap(),
+            TokenBucket::per_second(i64::MAX as u64, 1_000_000).unwrap(),
             MemoryStore::with_capacity(200_000).unwrap(),
         )
         .build()

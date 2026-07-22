@@ -93,10 +93,12 @@ fn bench_middleware(c: &mut Criterion) {
         for &n in CARDINALITIES {
             let store = MemoryStore::with_capacity((n * 2).max(1024)).unwrap();
             // Ample capacity ⇒ always admits ⇒ measures the pass-through path.
-            let limiter =
-                LimiterBuilder::new(TokenBucket::per_second(u64::MAX, 1_000_000).unwrap(), store)
-                    .build()
-                    .unwrap();
+            let limiter = LimiterBuilder::new(
+                TokenBucket::per_second(i64::MAX as u64, 1_000_000).unwrap(),
+                store,
+            )
+            .build()
+            .unwrap();
             let mut svc = FlowShieldLayer::per_peer(limiter).layer(Ok200);
 
             group.throughput(Throughput::Elements(1));

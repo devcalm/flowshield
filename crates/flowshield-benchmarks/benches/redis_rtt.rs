@@ -57,9 +57,12 @@ fn bench_redis_rtt(c: &mut Criterion) {
     let store = RedisStore::builder(&url)
         .build()
         .expect("build redis store");
-    let limiter = LimiterBuilder::new(TokenBucket::per_second(u64::MAX, 1_000_000).unwrap(), store)
-        .build()
-        .expect("build limiter");
+    let limiter = LimiterBuilder::new(
+        TokenBucket::per_second(i64::MAX as u64, 1_000_000).unwrap(),
+        store,
+    )
+    .build()
+    .expect("build limiter");
     let key = Key::from("bench-rtt");
 
     let mut group = c.benchmark_group("redis_rtt");

@@ -113,7 +113,9 @@ impl<S: Send + 'static> MemoryStore<S> {
     /// least 1 so this cannot produce a zero-capacity shard; public entry points do
     /// the real validation.
     fn from_parts(capacity: usize, requested_shards: usize) -> Self {
-        let num_shards = requested_shards.next_power_of_two().clamp(1, MAX_SHARDS);
+        // Clamp *before* rounding up: `next_power_of_two` panics on overflow (e.g. a
+        // `shards(usize::MAX)` request), and the result is bounded by MAX_SHARDS anyway.
+        let num_shards = requested_shards.clamp(1, MAX_SHARDS).next_power_of_two();
         let per_shard_cap = capacity.max(1).div_ceil(num_shards).max(1);
         let shards = (0..num_shards)
             .map(|_| Mutex::new(LruShard::with_capacity(per_shard_cap)))

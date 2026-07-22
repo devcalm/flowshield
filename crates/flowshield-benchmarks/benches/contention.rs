@@ -41,7 +41,7 @@ fn run_contention(c: &mut Criterion) {
     // algorithm's accept/reject branch.
     let make_limiter = || {
         LimiterBuilder::new(
-            TokenBucket::per_second(u64::MAX, 1_000_000).unwrap(),
+            TokenBucket::per_second(i64::MAX as u64, 1_000_000).unwrap(),
             MemoryStore::with_capacity(200_000).unwrap(),
         )
         .build()
