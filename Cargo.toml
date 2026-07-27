@@ -55,4 +55,4 @@ tracing = "0.1"
 # library crates (they appear under `[dev-dependencies]` only).
 metrics-util = "0.19"
 tracing-subscriber = "0.3"
-metrics-exporter-prometheus = "0.16"
+metrics-exporter-prometheus = "0.18"
