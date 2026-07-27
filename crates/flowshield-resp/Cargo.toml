@@ -27,7 +27,7 @@ flowshield-core = { version = "1", path = "../flowshield-core" }
 # boundary). `redis` provides the async `Script` (EVALSHA with EVAL fallback);
 # `deadpool-redis` provides the bounded connection pool (ADR-006).
 redis = { version = "0.27", default-features = false, features = ["tokio-comp", "script"] }
-deadpool-redis = "0.18"
+deadpool-redis = "0.23"
 
 # Only `tokio::time::timeout` is used from tokio — the mandatory per-operation
 # timeout (ADR-006, ADR-007). No runtime is started by the library itself.
