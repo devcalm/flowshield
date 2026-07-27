@@ -44,7 +44,7 @@ proptest = "1"
 # of any library crate; it appears solely in the non-published `flowshield-benchmarks`
 # crate. Criterion is chosen for its full-distribution (tail) latency reporting and its
 # machine-readable JSON output, both mandated by ADR-014.
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { version = "0.8", features = ["html_reports"] }
 
 # Observability (ADR-012). Optional and OFF by default in every crate that uses
 # them; declared here so versions stay aligned across the workspace.
