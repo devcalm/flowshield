@@ -53,6 +53,6 @@ tracing = "0.1"
 
 # Test/example-only observability tooling — never a runtime dependency of the
 # library crates (they appear under `[dev-dependencies]` only).
-metrics-util = "0.19"
+metrics-util = "0.20"
 tracing-subscriber = "0.3"
 metrics-exporter-prometheus = "0.16"
