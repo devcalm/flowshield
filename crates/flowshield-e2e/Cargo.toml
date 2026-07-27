@@ -36,4 +36,4 @@ http = "1"
 
 # Reachability probe ONLY — identical to flowshield-redis's dev-dep. The real backend
 # logic lives in flowshield-resp; this is just used to PING before running gated tests.
-redis = { version = "0.27", default-features = false, features = ["tokio-comp", "script"] }
+redis = { version = "1.4", default-features = false, features = ["tokio-comp", "script"] }
