@@ -22,7 +22,7 @@ flowshield = { path = "../flowshield", features = ["memory", "redis", "axum", "a
 
 # A real HTTP client over a real socket. Localhost plain http:// only, so TLS/HTTP-2 are
 # off — we only read status codes and raw headers.
-reqwest = { version = "0.12", default-features = false }
+reqwest = { version = "0.13", default-features = false }
 
 # The web frameworks themselves, to stand up real servers on ephemeral ports.
 axum = { version = "0.8", default-features = false, features = ["tokio", "http1"] }
