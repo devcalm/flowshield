@@ -26,7 +26,7 @@ flowshield-core = { version = "1", path = "../flowshield-core" }
 # RESP client + pool (ADR-016: Tokio-coupled backend, disclosed here at the crate
 # boundary). `redis` provides the async `Script` (EVALSHA with EVAL fallback);
 # `deadpool-redis` provides the bounded connection pool (ADR-006).
-redis = { version = "0.27", default-features = false, features = ["tokio-comp", "script"] }
+redis = { version = "1.5", default-features = false, features = ["tokio-comp", "script"] }
 deadpool-redis = "0.18"
 
 # Only `tokio::time::timeout` is used from tokio — the mandatory per-operation

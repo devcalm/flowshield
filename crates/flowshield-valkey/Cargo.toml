@@ -28,4 +28,4 @@ flowshield-memory = { version = "1", path = "../flowshield-memory" }
 # Dev-only, for the integration test's reachability probe. This is the redis-rs
 # client, which speaks RESP and so connects to a Valkey server unchanged (ADR-006);
 # Valkey needs no separate client crate. The real backend logic lives in flowshield-resp.
-redis = { version = "0.27", default-features = false, features = ["tokio-comp", "script"] }
+redis = { version = "1.5", default-features = false, features = ["tokio-comp", "script"] }
